@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from db.database import get_db
 from db import models
@@ -11,6 +11,7 @@ from schemas.visibility import (
     VisibilitySuggestionOut
 )
 from uuid import UUID
+from typing import List
 
 router = APIRouter(prefix="/visibility", tags=["Visibility"])
 
@@ -19,11 +20,27 @@ router = APIRouter(prefix="/visibility", tags=["Visibility"])
 # -------------------------
 @router.post("/check", response_model=VisibilityCheckRequestOut)
 def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depends(get_db)):
-    new_check = models.VisibilityCheckRequest(**data.dict())
+    new_check = models.VisibilityCheckRequest(**data.model_dump())
     db.add(new_check)
     db.commit()
     db.refresh(new_check)
     return new_check
+
+@router.get("/check", response_model=List[VisibilityCheckRequestOut])
+def list_check_requests(
+    business_id: UUID,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(models.VisibilityCheckRequest)
+        .filter_by(business_id=business_id)
+        .order_by(models.VisibilityCheckRequest.requested_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
 @router.get("/check/{check_id}", response_model=VisibilityCheckRequestOut)
 def get_check_request(check_id: UUID, db: Session = Depends(get_db)):
@@ -37,11 +54,27 @@ def get_check_request(check_id: UUID, db: Session = Depends(get_db)):
 # -------------------------
 @router.post("/result", response_model=VisibilityCheckResultOut)
 def create_result(data: VisibilityCheckResultCreate, db: Session = Depends(get_db)):
-    new_result = models.VisibilityCheckResult(**data.dict())
+    new_result = models.VisibilityCheckResult(**data.model_dump())
     db.add(new_result)
     db.commit()
     db.refresh(new_result)
     return new_result
+
+@router.get("/result", response_model=List[VisibilityCheckResultOut])
+def list_results(
+    business_id: UUID,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(models.VisibilityCheckResult)
+        .filter_by(business_id=business_id)
+        .order_by(models.VisibilityCheckResult.completed_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
 @router.get("/result/{result_id}", response_model=VisibilityCheckResultOut)
 def get_result(result_id: UUID, db: Session = Depends(get_db)):
@@ -55,11 +88,27 @@ def get_result(result_id: UUID, db: Session = Depends(get_db)):
 # -------------------------
 @router.post("/suggestion", response_model=VisibilitySuggestionOut)
 def create_suggestion(data: VisibilitySuggestionCreate, db: Session = Depends(get_db)):
-    new_suggestion = models.VisibilitySuggestion(**data.dict())
+    new_suggestion = models.VisibilitySuggestion(**data.model_dump())
     db.add(new_suggestion)
     db.commit()
     db.refresh(new_suggestion)
     return new_suggestion
+
+@router.get("/suggestion", response_model=List[VisibilitySuggestionOut])
+def list_suggestions(
+    business_id: UUID,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(models.VisibilitySuggestion)
+        .filter_by(business_id=business_id)
+        .order_by(models.VisibilitySuggestion.suggested_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
 @router.get("/suggestion/{suggestion_id}", response_model=VisibilitySuggestionOut)
 def get_suggestion(suggestion_id: UUID, db: Session = Depends(get_db)):

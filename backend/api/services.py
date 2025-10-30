@@ -1,11 +1,10 @@
-# backend/api/services.py
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from db.database import get_db
 from db import models
 from schemas.services import ServiceCreate, ServiceOut
 from uuid import UUID
+from typing import List
 
 router = APIRouter(prefix="/services", tags=["Services"])
 
@@ -23,3 +22,20 @@ def get_service(service_id: UUID, db: Session = Depends(get_db)):
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
     return service
+
+@router.get("/", response_model=List[ServiceOut])
+def list_services(
+    business_id: UUID,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    services = (
+        db.query(models.Service)
+        .filter_by(business_id=business_id)
+        .order_by(models.Service.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return services
