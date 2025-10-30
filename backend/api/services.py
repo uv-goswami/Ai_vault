@@ -11,7 +11,7 @@ router = APIRouter(prefix="/services", tags=["Services"])
 
 @router.post("/", response_model=ServiceOut)
 def create_service(data: ServiceCreate, db: Session = Depends(get_db)):
-    new_service = models.Service(**data.dict())
+    new_service = models.Service(**data.model_dump())
     db.add(new_service)
     db.commit()
     db.refresh(new_service)

@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 
+
 class JsonLDFeedCreate(BaseModel):
     business_id: UUID
     schema_type: str  # Enum: schema_type_enum

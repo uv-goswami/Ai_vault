@@ -8,8 +8,11 @@ from api import (
     ai_metadata,
     coupons,
     media,
-    visibility
+    visibility,
+    jsonld,
+    operational_info
 )
+
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
@@ -38,6 +41,10 @@ app.include_router(coupons.router)
 app.include_router(media.router)
 app.include_router(services.router)
 app.include_router(visibility.router)
+
+app.include_router(jsonld.router, prefix="/jsonld", tags=["JSON-LD"])
+app.include_router(operational_info.router, prefix="/operational-info", tags=["Operational Info"])
+
 
 # Health check
 @app.get("/")

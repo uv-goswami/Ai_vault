@@ -1,17 +1,17 @@
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
+from db.models import ServiceTypeEnum
 
 # -------------------------
 # SERVICE SCHEMAS
 # -------------------------
 class ServiceCreate(BaseModel):
     business_id: UUID
-    service_type: str
+    service_type: ServiceTypeEnum
     name: str
     description: str | None = None
     price: float
-    duration_minutes: int | None = None
 
 class ServiceOut(BaseModel):
     service_id: UUID
@@ -20,7 +20,6 @@ class ServiceOut(BaseModel):
     name: str
     description: str | None
     price: float
-    duration_minutes: int | None
     created_at: datetime
 
     class Config:
@@ -53,13 +52,11 @@ class RestaurantServiceFieldsOut(BaseModel):
 # -------------------------
 class SalonServiceFieldsCreate(BaseModel):
     service_id: UUID
-    duration_minutes: int | None = None
     stylist_required: bool = False
     gender_specific: str = "male"
 
 class SalonServiceFieldsOut(BaseModel):
     service_id: UUID
-    duration_minutes: int | None
     stylist_required: bool
     gender_specific: str
 

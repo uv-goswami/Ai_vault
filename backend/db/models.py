@@ -3,8 +3,15 @@ from sqlalchemy.dialects.postgresql import UUID, CITEXT
 from sqlalchemy.orm import relationship
 import uuid
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, UTC
 from db.database import Base
+import enum
+
+
+class ServiceTypeEnum(str, enum.Enum):
+    salon = "salon"
+    restaurant = "restaurant"
+    clinic = "clinic"
 
 # -------------------------
 # USERS TABLE
@@ -17,7 +24,7 @@ class User(Base):
     name = Column(String)
     auth_provider = Column(String, nullable=False)  # oauth, email, sso, password
     password_hash = Column(String)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     last_login = Column(DateTime(timezone=True))
     is_active = Column(Boolean, default=True)
 
@@ -44,7 +51,7 @@ class BusinessProfile(Base):
     identification_mark = Column(String)
     published = Column(Boolean, nullable=False, default=True)
     version = Column(Integer, nullable=False, default=1)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated = Column(DateTime(timezone=True))
 
     # Relationships
@@ -64,13 +71,13 @@ class Service(Base):
     service_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     business_id = Column(UUID(as_uuid=True), ForeignKey("business_profiles.business_id", ondelete="CASCADE"), nullable=False)
 
-    service_type = Column(Enum(name="service_type_enum"), nullable=False)
+    service_type = Column(Enum(ServiceTypeEnum, name="service_type_enum"), nullable=False)  # ✅ correct
     name = Column(String, nullable=False)
     description = Column(String)
     price = Column(Numeric(10, 2), nullable=False)
     currency = Column(String, nullable=False, default="INR")
     is_available = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime(timezone=True))
 
     # Relationships
@@ -123,7 +130,7 @@ class MediaAsset(Base):
     media_type = Column(Enum("image", "video", "document", name="media_type_enum"), nullable=False)
     url = Column(String, nullable=False)
     alt_text = Column(String)
-    uploaded_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    uploaded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     # Relationship
     business = relationship("BusinessProfile", back_populates="media_assets")
@@ -138,7 +145,7 @@ class VisibilityCheckRequest(Base):
 
     check_type = Column(Enum("visibility", "content_enhancement", "schema_completeness", name="check_type_enum"), nullable=False)
     input_data = Column(String)
-    requested_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    requested_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     business = relationship("BusinessProfile")
 
@@ -158,7 +165,7 @@ class VisibilityCheckResult(Base):
     issues_found = Column(String)
     recommendations = Column(String)
     output_snapshot = Column(String)
-    completed_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    completed_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     business = relationship("BusinessProfile")
     request = relationship("VisibilityCheckRequest")
@@ -177,7 +184,7 @@ class VisibilitySuggestion(Base):
     suggestion_type = Column(Enum("metadata_enhancement", "content_update", "seo", name="suggestion_type_enum"), nullable=False)
     title = Column(String, nullable=False)
     status = Column(Enum("pending", "implemented", "rejected", name="status_enum"), nullable=False, default="pending")
-    suggested_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    suggested_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     resolved_at = Column(DateTime(timezone=True))
 
     business = relationship("BusinessProfile")
@@ -196,7 +203,7 @@ class AiMetadata(Base):
     detected_entities = Column(String)
     keywords = Column(String)
     intent_labels = Column(String)
-    generated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    generated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     # Relationship
     business = relationship("BusinessProfile", back_populates="ai_metadata")
@@ -234,7 +241,7 @@ class JsonLDFeed(Base):
     jsonld_data = Column(String, nullable=False)
     is_valid = Column(Boolean, nullable=False, default=False)
     validation_errors = Column(String)
-    generated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    generated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     business = relationship("BusinessProfile")
 
@@ -253,7 +260,7 @@ class OperationalInfo(Base):
     wifi_available = Column(Boolean, default=False)
     accessibility_features = Column(String)
     nearby_parking_spot = Column(String)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime(timezone=True))
 
     business = relationship("BusinessProfile")
