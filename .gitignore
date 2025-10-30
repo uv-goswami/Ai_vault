@@ -1,2 +1,19 @@
 # Python virtual environment
 venv/
+temp
+backend/db/__pycache__/models.cpython-313.pyc
+frontend/eslint.config.js
+frontend/index.html
+frontend/package-lock.json
+frontend/package.json
+frontend/README.md
+frontend/vite.config.js
+frontend/public/vite.svg
+frontend/src/App.css
+frontend/src/App.jsx
+frontend/src/index.css
+frontend/src/main.jsx
+frontend/src/api/axios.js
+frontend/src/assets/react.svg
+frontend/src/components/ServiceList.jsx
+frontend/src/pages/Home.jsx

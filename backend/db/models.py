@@ -45,7 +45,7 @@ class BusinessProfile(Base):
     website = Column(String)
     address = Column(String)
     latitude = Column(Float)
-    LONGITUDDE = Column(Float)  # preserved as per your schema spelling
+    longitude = Column(Float)  # preserved as per your schema spelling
     timezone = Column(String)
     quote_slogan = Column(String)
     identification_mark = Column(String)
