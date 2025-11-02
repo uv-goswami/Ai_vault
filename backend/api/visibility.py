@@ -28,7 +28,7 @@ def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depen
 
 @router.get("/check", response_model=List[VisibilityCheckRequestOut])
 def list_check_requests(
-    business_id: UUID,
+    business_id: UUID = Query(...),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -62,7 +62,7 @@ def create_result(data: VisibilityCheckResultCreate, db: Session = Depends(get_d
 
 @router.get("/result", response_model=List[VisibilityCheckResultOut])
 def list_results(
-    business_id: UUID,
+    business_id: UUID = Query(...),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -96,7 +96,7 @@ def create_suggestion(data: VisibilitySuggestionCreate, db: Session = Depends(ge
 
 @router.get("/suggestion", response_model=List[VisibilitySuggestionOut])
 def list_suggestions(
-    business_id: UUID,
+    business_id: UUID = Query(...),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)

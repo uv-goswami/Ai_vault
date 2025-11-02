@@ -1,0 +1,56 @@
+/* ===== Base Button ===== */
+.btn {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* ===== Primary Button ===== */
+.btn-primary {
+  background: #1a73e8; /* Google blue */
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: #1558b0;
+}
+
+/* ===== Secondary Button ===== */
+.btn-secondary {
+  background: #f1f3f4;
+  color: #202124;
+}
+
+.btn-secondary:hover {
+  background: #e8eaed;
+}
+
+/* ===== Danger / Delete Button ===== */
+.btn-danger {
+  background: #d93025;
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #b31412;
+}
+
+/* ===== Outline Button ===== */
+.btn-outline {
+  background: transparent;
+  border: 1px solid #dadce0;
+  color: #202124;
+}
+
+.btn-outline:hover {
+  background: #f8f9fa;
+}

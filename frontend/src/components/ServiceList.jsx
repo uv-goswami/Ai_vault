@@ -9,6 +9,14 @@ export default function ServiceList({ businessId }) {
   const limit = 5;
 
   useEffect(() => {
+    if (!businessId) return;
+    setServices([]);
+    setOffset(0);
+    setHasMore(true);
+  }, [businessId]);
+
+  useEffect(() => {
+    if (!businessId) return;
     setLoading(true);
     api
       .get(`/services/?business_id=${businessId}&limit=${limit}&offset=${offset}`)
@@ -22,29 +30,24 @@ export default function ServiceList({ businessId }) {
         setHasMore(false);
       })
       .finally(() => setLoading(false));
-  }, [offset]);
+  }, [businessId, offset]);
 
   return (
-    <div className="p-4 border rounded shadow-sm bg-white">
-      <h2 className="text-xl font-bold mb-4">Services</h2>
-
+    <div>
       {services.length === 0 && !loading && (
         <p className="text-gray-500">No services found for this business.</p>
       )}
-
       <ul className="space-y-3">
         {services.map((service) => (
-          <li key={service.service_id} className="border p-3 rounded">
-            <div className="font-semibold">{service.name}</div>
+          <li key={service.service_id} className="border p-3 rounded hover:shadow transition">
+            <div className="font-semibold text-lg text-gray-800">{service.name}</div>
             {service.description && (
-              <p className="text-sm text-gray-600">{service.description}</p>
+              <p className="text-sm text-gray-600 mt-1">{service.description}</p>
             )}
           </li>
         ))}
       </ul>
-
       {loading && <p className="mt-4 text-blue-500">Loading...</p>}
-
       {hasMore && !loading && (
         <button
           onClick={() => setOffset(offset + limit)}

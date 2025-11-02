@@ -1,0 +1,68 @@
+/* ===== Directory Layout ===== */
+.directory-container {
+  background: #f9f9f9;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.directory-header {
+  margin-bottom: 2rem;
+}
+
+.directory-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #202124;
+  margin-bottom: 0.5rem;
+}
+
+.directory-header p {
+  font-size: 1rem;
+  color: #5f6368;
+}
+
+/* ===== Business Grid ===== */
+.business-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+/* ===== Business Card ===== */
+.business-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.business-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+.business-card h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #202124;
+  margin-bottom: 0.5rem;
+}
+
+.business-card p {
+  font-size: 0.95rem;
+  color: #5f6368;
+  margin-bottom: 0.5rem;
+}
+
+/* ===== Links ===== */
+.business-card a {
+  color: #1a73e8;
+  font-weight: 500;
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+
+.business-card a:hover {
+  color: #1558b0;
+}

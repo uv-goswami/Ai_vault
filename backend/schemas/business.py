@@ -11,11 +11,15 @@ class BusinessCreate(BaseModel):
     website: str | None = None
     address: str | None = None
     latitude: float | None = None
-    LONGITUDDE: float | None = None
+    longitude: float | None = None
     timezone: str | None = None
     quote_slogan: str | None = None
     identification_mark: str | None = None
     published: bool = True
+
+    model_config = {
+        "from_attributes": True
+    }
 
 class BusinessOut(BaseModel):
     business_id: UUID
@@ -27,7 +31,7 @@ class BusinessOut(BaseModel):
     website: str | None
     address: str | None
     latitude: float | None
-    LONGITUDDE: float | None
+    longitude: float | None
     timezone: str | None
     quote_slogan: str | None
     identification_mark: str | None
@@ -36,5 +40,6 @@ class BusinessOut(BaseModel):
     created_at: datetime
     updated: datetime | None = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

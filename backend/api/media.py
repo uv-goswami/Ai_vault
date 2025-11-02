@@ -25,7 +25,7 @@ def get_media(media_id: UUID, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[MediaOut])
 def list_media(
-    business_id: UUID,
+    business_id: UUID = Query(...),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)

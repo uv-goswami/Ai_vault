@@ -18,7 +18,7 @@ def create_operational_info(data: OperationalInfoCreate, db: Session = Depends(g
 
 @router.get("/", response_model=List[OperationalInfoOut])
 def list_operational_info(
-    business_id: UUID,
+    business_id: UUID = Query(...),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)

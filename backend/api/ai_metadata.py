@@ -6,7 +6,7 @@ from schemas.ai_metadata import AiMetadataCreate, AiMetadataOut
 from uuid import UUID
 from typing import List
 
-router = APIRouter(prefix="/metadata", tags=["AI Metadata"])
+router = APIRouter(prefix="/ai-metadata", tags=["AI Metadata"])
 
 @router.post("/", response_model=AiMetadataOut)
 def create_metadata(data: AiMetadataCreate, db: Session = Depends(get_db)):
@@ -18,7 +18,7 @@ def create_metadata(data: AiMetadataCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[AiMetadataOut])
 def list_metadata(
-    business_id: UUID,
+    business_id: UUID = Query(...),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)

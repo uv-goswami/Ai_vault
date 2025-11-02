@@ -1,0 +1,92 @@
+/* ===== Profile Layout ===== */
+.profile-container {
+  background: #f9f9f9;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+/* ===== Header ===== */
+.profile-header {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.profile-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #202124; /* dark gray */
+  margin-bottom: 0.5rem;
+}
+
+.profile-header p {
+  font-size: 1rem;
+  color: #5f6368; /* muted gray */
+  margin-bottom: 0.25rem;
+}
+
+/* ===== Section Cards ===== */
+.profile-section {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.profile-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #202124;
+  margin-bottom: 1rem;
+}
+
+/* ===== Text & Lists ===== */
+.profile-section p {
+  font-size: 0.95rem;
+  color: #5f6368;
+  line-height: 1.5;
+}
+
+.profile-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.profile-section li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.profile-section li:last-child {
+  border-bottom: none;
+}
+
+/* ===== Links ===== */
+.profile-section a {
+  color: #1a73e8; /* Google blue */
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.profile-section a:hover {
+  color: #1558b0;
+}
+
+/* ===== Media Grid ===== */
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.media-grid img,
+.media-grid video {
+  width: 100%;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
