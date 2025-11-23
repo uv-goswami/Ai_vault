@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db.database import engine, Base
+from fastapi.staticfiles import StaticFiles
 from api import (
     auth,
     users,
@@ -13,7 +14,6 @@ from api import (
     jsonld,
     operational_info
 )
-
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
@@ -28,7 +28,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can restrict this to specific domains
+    allow_origins=["*"],  # adjust to specific domains in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,10 +43,11 @@ app.include_router(coupons.router)
 app.include_router(media.router)
 app.include_router(services.router)
 app.include_router(visibility.router)
+app.include_router(jsonld.router)
 
-app.include_router(jsonld.router, prefix="/jsonld", tags=["JSON-LD"])
 app.include_router(operational_info.router, prefix="/operational-info", tags=["Operational Info"])
 
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Health check
 @app.get("/")

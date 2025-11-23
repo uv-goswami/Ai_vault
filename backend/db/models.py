@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Boolean, Integer, Float, ForeignKey, DateTime, Enum, Numeric
 from sqlalchemy.dialects.postgresql import UUID, CITEXT
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import ARRAY
 import uuid
 from pydantic import BaseModel
 from datetime import datetime, UTC
@@ -254,12 +255,13 @@ class OperationalInfo(Base):
 
     opening_hours = Column(String, nullable=False)
     closing_hours = Column(String, nullable=False)
-    off_days = Column(String)
+    off_days = Column(ARRAY(String), default=[])
     delivery_options = Column(String)
     reservation_options = Column(String)
     wifi_available = Column(Boolean, default=False)
     accessibility_features = Column(String)
     nearby_parking_spot = Column(String)
+    special_notes = Column(String)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime(timezone=True))
 

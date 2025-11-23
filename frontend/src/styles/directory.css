@@ -1,68 +1,77 @@
-/* ===== Directory Layout ===== */
-.directory-container {
-  background: #f9f9f9;
-  min-height: 100vh;
-  padding: 2rem;
-}
-
-.directory-header {
-  margin-bottom: 2rem;
-}
-
-.directory-header h1 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #202124;
-  margin-bottom: 0.5rem;
-}
-
-.directory-header p {
-  font-size: 1rem;
-  color: #5f6368;
-}
-
-/* ===== Business Grid ===== */
-.business-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+.directory-page {
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
 }
 
-/* ===== Business Card ===== */
-.business-card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 1.25rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+.directory-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
 }
 
-.business-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  transform: translateY(-2px);
+.directory-sub {
+  font-size: 1rem;
+  color: #c7c9d0;
+  max-width: 600px;
 }
 
-.business-card h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #202124;
-  margin-bottom: 0.5rem;
+/* Grid */
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1.5rem;
 }
 
-.business-card p {
-  font-size: 0.95rem;
-  color: #5f6368;
-  margin-bottom: 0.5rem;
+/* Directory Card */
+.directory-card {
+  background: #1a1c22;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #2c2f36;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: transform .2s ease;
 }
 
-/* ===== Links ===== */
-.business-card a {
-  color: #1a73e8;
-  font-weight: 500;
-  text-decoration: underline;
+.directory-card:hover {
+  transform: translateY(-4px);
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #fff;
+}
+
+.biz-type {
   font-size: 0.9rem;
+  color: #9fa6b2;
 }
 
-.business-card a:hover {
-  color: #1558b0;
+.card-description {
+  margin: 0.8rem 0;
+  color: #d6d7db;
+}
+
+.card-meta p {
+  margin: 4px 0;
+  color: #bfc1c8;
+}
+
+.card-link {
+  margin-top: 10px;
+  display: inline-block;
+  color: #4ea8ff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.card-link:hover {
+  text-decoration: underline;
+}
+
+.structured-note {
+  margin-top: 10px;
+  opacity: 0.6;
 }

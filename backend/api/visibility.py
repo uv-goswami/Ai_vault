@@ -12,6 +12,7 @@ from schemas.visibility import (
 )
 from uuid import UUID
 from typing import List
+from datetime import datetime
 
 router = APIRouter(prefix="/visibility", tags=["Visibility"])
 
@@ -20,6 +21,11 @@ router = APIRouter(prefix="/visibility", tags=["Visibility"])
 # -------------------------
 @router.post("/check", response_model=VisibilityCheckRequestOut)
 def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depends(get_db)):
+    # ✅ Ensure business exists
+    business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
     new_check = models.VisibilityCheckRequest(**data.model_dump())
     db.add(new_check)
     db.commit()
@@ -54,6 +60,11 @@ def get_check_request(check_id: UUID, db: Session = Depends(get_db)):
 # -------------------------
 @router.post("/result", response_model=VisibilityCheckResultOut)
 def create_result(data: VisibilityCheckResultCreate, db: Session = Depends(get_db)):
+    # ✅ Ensure business exists
+    business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
     new_result = models.VisibilityCheckResult(**data.model_dump())
     db.add(new_result)
     db.commit()
@@ -88,6 +99,11 @@ def get_result(result_id: UUID, db: Session = Depends(get_db)):
 # -------------------------
 @router.post("/suggestion", response_model=VisibilitySuggestionOut)
 def create_suggestion(data: VisibilitySuggestionCreate, db: Session = Depends(get_db)):
+    # ✅ Ensure business exists
+    business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
     new_suggestion = models.VisibilitySuggestion(**data.model_dump())
     db.add(new_suggestion)
     db.commit()
@@ -116,3 +132,65 @@ def get_suggestion(suggestion_id: UUID, db: Session = Depends(get_db)):
     if not suggestion:
         raise HTTPException(status_code=404, detail="Suggestion not found")
     return suggestion
+
+# -------------------------
+# NEW: Run pipeline
+# -------------------------
+@router.post("/run", response_model=VisibilityCheckResultOut)
+def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)):
+    business = db.query(models.BusinessProfile).filter_by(business_id=business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    # Create check request
+    check = models.VisibilityCheckRequest(
+        business_id=business_id,
+        check_type="visibility",
+        input_data=None,
+        requested_at=datetime.utcnow()
+    )
+    db.add(check)
+    db.commit()
+    db.refresh(check)
+
+    # Simple scoring heuristic
+    score = 50.0
+    issues = []
+    recommendations = []
+
+    if not business.description:
+        issues.append("Missing description")
+        recommendations.append("Add a clear description")
+
+    services_count = db.query(models.Service).filter_by(business_id=business_id).count()
+    if services_count == 0:
+        issues.append("No services listed")
+        recommendations.append("Add services")
+
+    media_count = db.query(models.MediaAsset).filter_by(business_id=business_id).count()
+    if media_count == 0:
+        issues.append("No media uploaded")
+        recommendations.append("Upload images/videos")
+
+    if business.website:
+        score += 10
+    if services_count >= 3:
+        score += 20
+    if media_count >= 3:
+        score += 20
+    score = min(score, 100.0)
+
+    result = models.VisibilityCheckResult(
+        request_id=check.request_id,
+        business_id=business_id,
+        visibility_score=score,
+        issues_found=", ".join(issues) if issues else None,
+        recommendations=", ".join(recommendations) if recommendations else None,
+        output_snapshot=None,
+        completed_at=datetime.utcnow()
+    )
+
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    return result

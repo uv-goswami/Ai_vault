@@ -1,64 +1,66 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import Landing from "./pages/Landing";
-import BusinessPage from "./pages/BusinessPage";
-import BusinessDashboard from "./pages/BusinessDashboard";
-import BusinessProfile from "./pages/BusinessProfile";
-import BusinessDirectory from "./pages/BusinessDirectory";
-import ProtectedRoute from "./components/ProtectedRoute";
-import LogoutButton from "./components/LogoutButton";
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import { AuthProvider } from './context/AuthContext'
 
-function Layout({ children }) {
-  return (
-    <div>
-      {/* Simple top bar */}
-      <nav className="flex justify-between items-center bg-white shadow px-6 py-3">
-        <Link to="/" className="text-xl font-semibold text-gray-800">
-          AiVault
-        </Link>
-        <LogoutButton />
-      </nav>
-      <main>{children}</main>
-    </div>
-  );
-}
+// Public pages
+import Home from './pages/Public/Home'
+import Login from './pages/Public/Login'
+import Register from './pages/Public/Register'
+import Directory from './pages/Public/Directory'
+import BusinessProfile from './pages/Public/BusinessProfile'
 
+// Dashboard modules
+import DashboardHome from './pages/Dashboard/DashboardHome'
+import Profile from './pages/Dashboard/Profile'
+import Services from './pages/Dashboard/Services'
+import Media from './pages/Dashboard/Media'
+import Metadata from './pages/Dashboard/Metadata'
+import Coupons from './pages/Dashboard/Coupons'
+import Visibility from './pages/Dashboard/Visibility'
+import JsonLD from './pages/Dashboard/JsonLD'
+import OperationalInfo from './pages/Dashboard/OperationalInfo'
+
+// Optional: simple 404 fallback
 function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-center p-6">
-      <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-      <p className="text-gray-600 mb-6">The page you’re looking for doesn’t exist.</p>
-      <a href="/" className="btn btn-primary">
-        Back to Home
-      </a>
+    <div style={{ padding: '2rem' }}>
+      <h2>404 - Page Not Found</h2>
+      <p>The page you are looking for does not exist.</p>
     </div>
-  );
+  )
 }
 
 export default function App() {
   return (
     <Router>
-      <Layout>
+      <AuthProvider>
+        <Navbar />
         <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/business-access" element={<BusinessPage />} />
-          <Route path="/directory" element={<BusinessDirectory />} />
+          {/* Landing & Auth */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Public */}
+          <Route path="/directory" element={<Directory />} />
           <Route path="/business/:id" element={<BusinessProfile />} />
 
-          {/* Protected dashboard route */}
-          <Route
-            path="/dashboard/:id"
-            element={
-              <ProtectedRoute>
-                <BusinessDashboard />
-              </ProtectedRoute>
-            }
-          />
+          {/* Dashboard */}
+          <Route path="/dashboard/:id" element={<DashboardHome />} />
+          <Route path="/dashboard/:id/profile" element={<Profile />} />
+          <Route path="/dashboard/:id/services" element={<Services />} />
+          <Route path="/dashboard/:id/media" element={<Media />} />
+          <Route path="/dashboard/:id/metadata" element={<Metadata />} />
+          <Route path="/dashboard/:id/coupons" element={<Coupons />} />
+          <Route path="/dashboard/:id/visibility" element={<Visibility />} />
+          <Route path="/dashboard/:id/jsonld" element={<JsonLD />} />
+          <Route path="/dashboard/:id/operational-info" element={<OperationalInfo />} />
 
-          {/* Fallback route */}
+          {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </Layout>
+      </AuthProvider>
     </Router>
-  );
+  )
 }

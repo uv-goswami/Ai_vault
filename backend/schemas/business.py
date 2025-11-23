@@ -17,9 +17,7 @@ class BusinessCreate(BaseModel):
     identification_mark: str | None = None
     published: bool = True
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 class BusinessOut(BaseModel):
     business_id: UUID
@@ -40,6 +38,21 @@ class BusinessOut(BaseModel):
     created_at: datetime
     updated: datetime | None = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
+
+
+
+class BusinessUpdate(BaseModel):
+    # All fields optional for partial update
+    name: str | None = None
+    description: str | None = None
+    business_type: str | None = None
+    phone: str | None = None
+    website: str | None = None
+    address: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    timezone: str | None = None
+    quote_slogan: str | None = None
+    identification_mark: str | None = None
+    published: bool | None = None

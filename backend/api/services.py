@@ -2,14 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from db.database import get_db
 from db import models
-from schemas.services import ServiceCreate, ServiceOut
+from schemas.services import ServiceCreate, ServiceOut, ServiceUpdate
 from uuid import UUID
 from typing import List
+from datetime import datetime
 
 router = APIRouter(prefix="/services", tags=["Services"])
 
 @router.post("/", response_model=ServiceOut)
 def create_service(data: ServiceCreate, db: Session = Depends(get_db)):
+    # ✅ Ensure business exists
+    business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
     new_service = models.Service(**data.model_dump())
     db.add(new_service)
     db.commit()
@@ -39,3 +45,28 @@ def list_services(
         .all()
     )
     return services
+
+
+
+@router.patch("/{service_id}", response_model=ServiceOut)
+def update_service(service_id: UUID, payload: ServiceUpdate, db: Session = Depends(get_db)):
+    service = db.query(models.Service).filter_by(service_id=service_id).first()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(service, field, value)
+
+    db.commit()
+    db.refresh(service)
+    return service
+
+@router.delete("/{service_id}", response_model=dict)
+def delete_service(service_id: UUID, db: Session = Depends(get_db)):
+    service = db.query(models.Service).filter_by(service_id=service_id).first()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    db.delete(service)
+    db.commit()
+    return {"detail": "Service deleted"}

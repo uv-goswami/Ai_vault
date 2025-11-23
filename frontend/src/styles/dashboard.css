@@ -1,111 +1,61 @@
-/* ===== Dashboard Layout ===== */
-.dashboard-container {
-  background: #f9f9f9; /* light gray page background */
-  min-height: 100vh;
-  padding: 2rem;
+.dashboard-page {
+  display: flex;
+  flex-direction: row;
+  min-height: calc(100vh - 60px); /* account for navbar */
 }
 
-/* ===== Header Card ===== */
-.dashboard-container header {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+.dashboard-content {
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 800px;         /* ✅ limit content width */
+  margin-left: auto;        /* ✅ center content */
+  margin-right: auto;
 }
 
-.dashboard-container header h1 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #202124; /* dark gray */
-  margin-bottom: 0.5rem;
+
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
 }
 
-.dashboard-container header p {
-  font-size: 1rem;
-  color: #5f6368; /* muted gray */
-  margin-bottom: 0.25rem;
-}
-
-.dashboard-container header p:last-child {
-  font-size: 0.85rem;
-  font-style: italic;
-  color: #70757a; /* lighter gray */
-}
-
-/* ===== Section Cards ===== */
-.section-card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-
-.section-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #202124;
+.page-sub {
+  font-size: 0.95rem;
+  color: #9fa2a8;
   margin-bottom: 1rem;
 }
 
-/* ===== Text Styles ===== */
-.section-card p {
-  font-size: 0.95rem;
-  color: #5f6368;
-  line-height: 1.5;
+/* Responsive: stack sidebar below navbar */
+@media (max-width: 900px) {
+  .dashboard-page {
+    flex-direction: column;
+  }
 }
 
-.section-card ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.section-card li {
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #f1f3f4;
-}
-
-.section-card li:last-child {
-  border-bottom: none;
-}
-
-/* ===== Links ===== */
-.section-card a {
-  color: #1a73e8; /* Google blue */
-  text-decoration: underline;
-  font-weight: 500;
-}
-
-.section-card a:hover {
-  color: #1558b0;
-}
-
-/* ===== Buttons ===== */
-.btn {
-  padding: 0.6rem 1.2rem;
+/* Panels for displaying details */
+.panel {
+  background-color: #1b191ec1;       /* white card background */
+  border: 1px solid #ccc;       /* subtle border */
   border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.2s ease;
+  padding: 16px;
+  margin-bottom: 16px;
+  color: #ebe0e0;                  /* default text color */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08); /* soft shadow */
 }
 
-.btn-primary {
-  background: #1a73e8;
-  color: #ffffff;
+/* Paragraphs inside panels */
+.panel p {
+  color: #fff8f8;                  /* darker text for readability */
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0.5rem 0;
 }
 
-.btn-primary:hover {
-  background: #1558b0;
-}
-
-.btn-secondary {
-  background: #f1f3f4;
-  color: #202124;
-}
-
-.btn-secondary:hover {
-  background: #e8eaed;
+/* Strong labels inside panels */
+.panel p strong {
+  color: #f6f6f6;                  /* bold labels stay pure black */
+  font-weight: 600;
 }

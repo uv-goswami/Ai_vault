@@ -2,9 +2,7 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 
-# -------------------------
-# CHECK REQUEST
-# -------------------------
+# Check request
 class VisibilityCheckRequestCreate(BaseModel):
     business_id: UUID
     check_type: str  # Enum: check_type_enum
@@ -20,9 +18,7 @@ class VisibilityCheckRequestOut(BaseModel):
     class Config:
         orm_mode = True
 
-# -------------------------
-# CHECK RESULT
-# -------------------------
+# Check result
 class VisibilityCheckResultCreate(BaseModel):
     request_id: UUID
     business_id: UUID
@@ -44,9 +40,7 @@ class VisibilityCheckResultOut(BaseModel):
     class Config:
         orm_mode = True
 
-# -------------------------
-# SUGGESTIONS
-# -------------------------
+# Suggestions
 class VisibilitySuggestionCreate(BaseModel):
     business_id: UUID
     suggestion_type: str  # Enum: suggestion_type_enum

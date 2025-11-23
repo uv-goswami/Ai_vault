@@ -3,9 +3,6 @@ from uuid import UUID
 from datetime import datetime
 from db.models import ServiceTypeEnum
 
-# -------------------------
-# SERVICE SCHEMAS
-# -------------------------
 class ServiceCreate(BaseModel):
     business_id: UUID
     service_type: ServiceTypeEnum
@@ -25,10 +22,7 @@ class ServiceOut(BaseModel):
     class Config:
         orm_mode = True
 
-
-# -------------------------
-# RESTAURANT SERVICE FIELDS
-# -------------------------
+# Restaurant-specific fields
 class RestaurantServiceFieldsCreate(BaseModel):
     service_id: UUID
     cuisine_type: str
@@ -46,10 +40,7 @@ class RestaurantServiceFieldsOut(BaseModel):
     class Config:
         orm_mode = True
 
-
-# -------------------------
-# SALON SERVICE FIELDS
-# -------------------------
+# Salon-specific fields
 class SalonServiceFieldsCreate(BaseModel):
     service_id: UUID
     stylist_required: bool = False
@@ -62,3 +53,10 @@ class SalonServiceFieldsOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ServiceUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    price: float | None = None
+    service_type: ServiceTypeEnum | None = None

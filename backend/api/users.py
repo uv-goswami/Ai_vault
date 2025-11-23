@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from db.database import get_db
+from db import models
 from db.models import User
 from schemas.users import UserCreate, UserOut
 import uuid
@@ -27,7 +28,22 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # 🔑 Minimal addition: auto-create a BusinessProfile for this user
+    existing_business = db.query(models.BusinessProfile).filter_by(owner_id=new_user.user_id).first()
+    if not existing_business:
+        auto_business = models.BusinessProfile(
+            owner_id=new_user.user_id,
+            name=(new_user.name or "New") + " Business",
+            description="Auto-created on signup",
+            published=True
+        )
+        db.add(auto_business)
+        db.commit()
+        db.refresh(auto_business)
+
     return new_user
+
 
 @router.get("/by-email/{email}", response_model=UserOut)
 def get_user_by_email(email: str, db: Session = Depends(get_db)):
