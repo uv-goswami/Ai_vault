@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createUser, createBusiness } from '../../api/client'
+// ✅ Import updateBusiness and getBusinessByOwner instead of createBusiness
+import { createUser, getBusinessByOwner, updateBusiness } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
 import '../../styles/register.css'
 
@@ -32,6 +33,8 @@ export default function Register() {
     }
 
     try {
+      // 1. Create the User
+      // (Your backend automatically creates a default "Business Profile" when this happens)
       const user = await createUser({
         email,
         name,
@@ -39,18 +42,26 @@ export default function Register() {
         password_hash: password
       })
 
+      // 2. Log the user in immediately
       login(user.user_id)
 
-      const business = await createBusiness({
-        owner_id: user.user_id,
-        name: businessName,
-        business_type: businessType,
-        address: businessAddress,
-        published: true
-      })
+      // 3. Fetch the default business that the BACKEND just created
+      const business = await getBusinessByOwner(user.user_id)
 
+      // 4. Update that existing business with the details the user just entered
+      if (business) {
+         await updateBusiness(business.business_id, {
+             name: businessName,
+             business_type: businessType,
+             address: businessAddress
+         })
+      }
+
+      // 5. Redirect to the correct dashboard
       navigate(`/dashboard/${business.business_id}`)
-    } catch {
+
+    } catch (err) {
+      console.error(err)
       setError('Registration failed. Try again.')
     }
   }
@@ -75,16 +86,50 @@ export default function Register() {
         <p className="register-sub">Join AiVault and start enhancing your visibility</p>
 
         <form className="register-form" onSubmit={handleSubmit}>
-          <input name="email" type="email" placeholder="Email" value={formData.email} onChange={handleChange} />
-          <input name="password" type="password" placeholder="Password" value={formData.password} onChange={handleChange} />
-          <input name="name" type="text" placeholder="Your Name" value={formData.name} onChange={handleChange} />
-          <input name="businessName" type="text" placeholder="Business Name" value={formData.businessName} onChange={handleChange} />
-          <select name="businessType" value={formData.businessType} onChange={handleChange}>
+          <input
+            name="email"
+            type="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={handleChange}
+          />
+          <input
+            name="password"
+            type="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={handleChange}
+          />
+          <input
+            name="name"
+            type="text"
+            placeholder="Your Name"
+            value={formData.name}
+            onChange={handleChange}
+          />
+          <input
+            name="businessName"
+            type="text"
+            placeholder="Business Name"
+            value={formData.businessName}
+            onChange={handleChange}
+          />
+          <select
+            name="businessType"
+            value={formData.businessType}
+            onChange={handleChange}
+          >
             <option value="restaurant">Restaurant</option>
             <option value="salon">Salon</option>
             <option value="clinic">Clinic</option>
           </select>
-          <input name="businessAddress" type="text" placeholder="Business Address" value={formData.businessAddress} onChange={handleChange} />
+          <input
+            name="businessAddress"
+            type="text"
+            placeholder="Business Address"
+            value={formData.businessAddress}
+            onChange={handleChange}
+          />
 
           {error && <p className="error">{error}</p>}
           <button type="submit" className="btn primary full-width">Register & Create Business</button>

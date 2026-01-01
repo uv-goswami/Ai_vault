@@ -15,6 +15,7 @@ from api import (
     operational_info
 )
 
+
 # Create all tables
 Base.metadata.create_all(bind=engine)
 
@@ -28,7 +29,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # adjust to specific domains in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,11 +1,12 @@
+import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from db.database import get_db
 from db import models
 from db.models import User
 from schemas.users import UserCreate, UserOut
-import uuid
-from datetime import datetime
+from api.security import get_password_hash 
 
 router = APIRouter()
 
@@ -20,30 +21,25 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         email=user.email,
         name=user.name,
         auth_provider=user.auth_provider,
-        password_hash=user.password_hash,
+        password_hash=get_password_hash(user.password_hash), # Security fix
         created_at=datetime.utcnow(),
-        last_login=None,
         is_active=True
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    # 🔑 Minimal addition: auto-create a BusinessProfile for this user
-    existing_business = db.query(models.BusinessProfile).filter_by(owner_id=new_user.user_id).first()
-    if not existing_business:
-        auto_business = models.BusinessProfile(
-            owner_id=new_user.user_id,
-            name=(new_user.name or "New") + " Business",
-            description="Auto-created on signup",
-            published=True
-        )
-        db.add(auto_business)
-        db.commit()
-        db.refresh(auto_business)
+    # Auto-create business
+    auto_business = models.BusinessProfile(
+        owner_id=new_user.user_id,
+        name=f"{(new_user.name or 'New')} Business",
+        description="Auto-created on signup",
+        published=True
+    )
+    db.add(auto_business)
+    db.commit()
 
     return new_user
-
 
 @router.get("/by-email/{email}", response_model=UserOut)
 def get_user_by_email(email: str, db: Session = Depends(get_db)):
