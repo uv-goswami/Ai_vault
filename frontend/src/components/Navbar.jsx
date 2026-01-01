@@ -21,7 +21,7 @@ export default function Navbar() {
         <div className="nav-links">
           <NavLink to="/" className="nav-item">Home</NavLink>
           <NavLink to="/directory" className="nav-item">Directory</NavLink>
-          {userId && <NavLink to={`/dashboard/${userId}`} className="nav-item">Dashboard</NavLink>}
+          {businessId && <NavLink to={`/dashboard/${businessId}`} className="nav-item">Dashboard</NavLink>}
         </div>
 
         <div className="nav-right">
