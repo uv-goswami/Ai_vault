@@ -1,2 +1,3 @@
 # Python virtual environment
 venv/
+internal_db_key.txt
