@@ -8,7 +8,9 @@ import Home from './pages/Public/Home'
 import Login from './pages/Public/Login'
 import Register from './pages/Public/Register'
 import Directory from './pages/Public/Directory'
-import BusinessProfile from './pages/Public/BusinessProfile'
+
+// ✅ NEW: Import the detailed public view we just created
+import BusinessDetail from './pages/Public/BusinessDetail' 
 
 // Dashboard modules
 import DashboardHome from './pages/Dashboard/DashboardHome'
@@ -44,7 +46,9 @@ export default function App() {
 
           {/* Public */}
           <Route path="/directory" element={<Directory />} />
-          <Route path="/business/:id" element={<BusinessProfile />} />
+          
+          {/* ✅ UPDATED: Points to the new BusinessDetail page */}
+          <Route path="/business/:id" element={<BusinessDetail />} />
 
           {/* Dashboard */}
           <Route path="/dashboard/:id" element={<DashboardHome />} />
