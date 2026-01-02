@@ -5,7 +5,7 @@ import {
   listMedia,
   listServices,
   listCoupons,
-  API_BASE // Imported to fix image URLs
+  API_BASE
 } from "../../api/client"
 import "../../styles/directory.css"
 
@@ -20,35 +20,24 @@ export default function Directory() {
   async function loadDirectory() {
     setLoading(true)
     try {
-      // 1. Fetch the list of businesses
       const businessList = await listBusinesses()
 
-      // 2. Fetch details for ALL businesses in parallel (Efficient Data Loading)
       const enrichedData = await Promise.all(
         businessList.map(async (biz) => {
           try {
-            // Run all 4 fetches at the same time for speed
             const [opInfo, media, services, coupons] = await Promise.all([
               getOperationalInfoByBusiness(biz.business_id).catch(() => null),
-              listMedia(biz.business_id, 1, 0).catch(() => []), // Get 1 image for thumbnail
-              listServices(biz.business_id, 100, 0).catch(() => []), // Get count
-              listCoupons(biz.business_id, 100, 0).catch(() => [])  // Get count
+              listMedia(biz.business_id, 1, 0).catch(() => []),
+              listServices(biz.business_id, 100, 0).catch(() => []), 
+              listCoupons(biz.business_id, 100, 0).catch(() => [])
             ])
 
-            return {
-              ...biz,
-              hours: opInfo,
-              media: media,
-              services: services,
-              coupons: coupons
-            }
+            return { ...biz, hours: opInfo, media, services, coupons }
           } catch (e) {
-            // If one fails, just return the basic info so the whole page doesn't crash
             return { ...biz, hours: null, media: [], services: [], coupons: [] }
           }
         })
       )
-
       setBusinesses(enrichedData)
     } catch (err) {
       console.error("Failed to load directory:", err)
@@ -58,7 +47,6 @@ export default function Directory() {
     }
   }
 
-  // Helper to construct safe image URLs
   const getImageUrl = (url) => {
     if (!url) return null
     if (url.startsWith('http')) return url
@@ -67,13 +55,13 @@ export default function Directory() {
 
   return (
     <div className="directory-page container">
-      <h1 className="directory-title">AI-Ready Business Directory</h1>
+      <h1 className="directory-title">Business Directory</h1>
       <p className="directory-sub">
-        Smart listings optimized for AI systems, crawlers, and search engines.
+        Explore AI-ready local businesses and services.
       </p>
 
       {loading ? (
-        <div className="muted">Loading directory data...</div>
+        <div className="muted">Loading directory...</div>
       ) : businesses.length === 0 ? (
         <div className="muted">No businesses found.</div>
       ) : (
@@ -85,22 +73,26 @@ export default function Directory() {
               itemScope
               itemType="https://schema.org/LocalBusiness"
             >
-              {/* Thumbnail - Now uses real data */}
+              {/* Image Section */}
               {biz.media && biz.media.length > 0 ? (
                 <img
                   src={getImageUrl(biz.media[0].url)}
                   alt={biz.name}
                   className="directory-img"
                   onError={(e) => {
-                    e.target.style.display = 'none' // Hide if broken
-                    e.target.nextSibling.style.display = 'flex' // Show placeholder
+                    e.target.style.display = 'none'
+                    e.target.nextSibling.style.display = 'flex'
                   }}
                 />
               ) : null}
-              {/* Fallback Placeholder (shown if no image or image breaks) */}
+              
+              {/* Fallback Placeholder (Only shows if no image exists) */}
               <div 
                 className="directory-img placeholder" 
-                style={{ display: biz.media && biz.media.length > 0 ? 'none' : 'flex' }}
+                style={{ 
+                  display: biz.media && biz.media.length > 0 ? 'none' : 'flex',
+                  backgroundColor: '#f3f4f6', color: '#888'
+                }}
               >
                 {biz.name.charAt(0)}
               </div>
@@ -109,47 +101,56 @@ export default function Directory() {
               <header className="card-header">
                 <h2 itemProp="name">{biz.name}</h2>
                 <span className="biz-type">
-                  {biz.business_type || "LocalBusiness"}
+                  {biz.business_type || "Business"}
                 </span>
               </header>
 
-              {/* Description */}
-              <p className="card-description" itemProp="description">
-                {biz.description 
-                  ? (biz.description.length > 100 ? biz.description.substring(0, 100) + "..." : biz.description)
-                  : "No description provided."}
-              </p>
+              {/* Description (Only show if exists) */}
+              {biz.description && (
+                <p className="card-description" itemProp="description">
+                  {biz.description.length > 90 
+                    ? biz.description.substring(0, 90) + "..." 
+                    : biz.description}
+                </p>
+              )}
 
-              {/* Details - Populated with Real Data */}
+              {/* Details */}
               <div className="card-meta">
                 <p>
-                  <strong>Address:</strong>{" "}
-                  <span itemProp="address">{biz.address || "Location not listed"}</span>
+                  <strong>📍 Location:</strong>{" "}
+                  <span itemProp="address">{biz.address || "Online / Remote"}</span>
                 </p>
 
-                {biz.hours ? (
+                {biz.hours && (
                   <p>
-                    <strong>Hours:</strong>{" "}
+                    <strong>🕒 Hours:</strong>{" "}
                     <span itemProp="openingHours">
                         {biz.hours.opening_time} - {biz.hours.closing_time}
                     </span>
                   </p>
-                ) : (
+                )}
+
+                {/* Only show services count if > 0 */}
+                {biz.services.length > 0 && (
                   <p>
-                    <strong>Hours:</strong> <span className="muted-text">Contact for hours</span>
+                    <strong>🛠 Services:</strong> {biz.services.length} available
                   </p>
                 )}
 
-                <p>
-                  <strong>Services:</strong> {biz.services.length > 0 ? `${biz.services.length} services listed` : "None listed"}
-                </p>
-
-                {biz.coupons.length > 0 ? (
-                  <p className="coupon-highlight" style={{color: '#d32f2f', fontWeight: 'bold'}}>
-                    🎟 {biz.coupons.length} Active Coupon{biz.coupons.length > 1 ? 's' : ''}!
-                  </p>
-                ) : (
-                   <p className="muted-text" style={{fontSize: '0.9em', marginTop: '5px'}}>No active coupons</p>
+                {/* Positive Green Badge for Coupons */}
+                {biz.coupons.length > 0 && (
+                  <div style={{
+                    marginTop: '10px', 
+                    display: 'inline-block',
+                    padding: '4px 8px',
+                    backgroundColor: '#e6f4ea',
+                    color: '#1e7e34',
+                    borderRadius: '4px',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold'
+                  }}>
+                    🎟 {biz.coupons.length} Special Offer{biz.coupons.length > 1 ? 's' : ''}
+                  </div>
                 )}
               </div>
 
@@ -159,13 +160,8 @@ export default function Directory() {
                 className="card-link"
                 itemProp="url"
               >
-                View Details →
+                View Details
               </a>
-
-              {/* AI Note */}
-              <div className="structured-note">
-                <small>✔ AI-Optimized Listing</small>
-              </div>
             </article>
           ))}
         </div>
