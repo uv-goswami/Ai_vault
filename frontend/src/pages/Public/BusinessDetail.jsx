@@ -173,7 +173,7 @@ export default function BusinessDetail() {
           </div>
         </section>
       )}
-
+ 
     </div>
   )
 }
