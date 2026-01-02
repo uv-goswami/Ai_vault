@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-// ✅ Import updateBusiness and getBusinessByOwner instead of createBusiness
+// Import all necessary API functions
 import { createUser, getBusinessByOwner, updateBusiness } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
 import '../../styles/register.css'
@@ -34,7 +34,7 @@ export default function Register() {
 
     try {
       // 1. Create the User
-      // (Your backend automatically creates a default "Business Profile" when this happens)
+      // (Your backend automatically creates a placeholder Business when a user is created)
       const user = await createUser({
         email,
         name,
@@ -42,13 +42,10 @@ export default function Register() {
         password_hash: password
       })
 
-      // 2. Log the user in immediately
-      login(user.user_id)
-
-      // 3. Fetch the default business that the BACKEND just created
+      // 2. Fetch that auto-created placeholder business
       const business = await getBusinessByOwner(user.user_id)
 
-      // 4. Update that existing business with the details the user just entered
+      // 3. Update the placeholder business with the actual details from the form
       if (business) {
          await updateBusiness(business.business_id, {
              name: businessName,
@@ -57,7 +54,11 @@ export default function Register() {
          })
       }
 
-      // 5. Redirect to the correct dashboard
+      // 4. Log the user in with BOTH IDs
+      // This is crucial for the Navbar to see the businessId immediately
+      login(user.user_id, business.business_id)
+
+      // 5. Redirect to the Dashboard
       navigate(`/dashboard/${business.business_id}`)
 
     } catch (err) {
@@ -72,7 +73,7 @@ export default function Register() {
         <div className="register-panel">
           <h2 className="register-title">You're already registered</h2>
           <p className="register-sub">
-            Go to your <a href={`/dashboard/${userId}`}>Dashboard</a>
+            You are logged in.
           </p>
         </div>
       </div>
@@ -122,6 +123,8 @@ export default function Register() {
             <option value="restaurant">Restaurant</option>
             <option value="salon">Salon</option>
             <option value="clinic">Clinic</option>
+            <option value="retail">Retail</option>
+            <option value="other">Other</option>
           </select>
           <input
             name="businessAddress"

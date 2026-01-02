@@ -19,33 +19,23 @@ export default function Directory() {
 
   async function loadDirectory() {
     setLoading(true)
-
     try {
+      // 1. Fetch ONLY the list of businesses
       const data = await listBusinesses()
+      
+      // 2. Map them to the state directly (Assigning empty placeholders for now)
+      // This creates a fast, responsive UI without 50+ background requests.
+      const simplifiedData = data.map((b) => ({
+        ...b,
+        hours: null,     // Placeholder: prevents the 404 error
+        media: [],       // Placeholder
+        services: [],    // Placeholder
+        coupons: []      // Placeholder
+      }))
 
-      // Fetch extra info for each business
-      const enriched = await Promise.all(
-        data.map(async (b) => {
-          const [hours, media, services, coupons] = await Promise.all([
-            getOperationalInfoSafe(b.business_id),
-            listMediaSafe(b.business_id),
-            listServices(b.business_id, 100, 0).catch(() => []),
-            listCoupons(b.business_id, 100, 0).catch(() => [])
-          ])
-
-          return {
-            ...b,
-            hours,
-            media,
-            services,
-            coupons
-          }
-        })
-      )
-
-      setBusinesses(enriched)
+      setBusinesses(simplifiedData)
     } catch (err) {
-      console.error(err)
+      console.error("Failed to load directory:", err)
       setBusinesses([])
     } finally {
       setLoading(false)
