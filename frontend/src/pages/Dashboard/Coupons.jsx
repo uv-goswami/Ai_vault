@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
-import '../../styles/dashboard.css'   // ✅ import dashboard styles
+import '../../styles/dashboard.css'
+// 1. Import API_BASE
+import { API_BASE } from '../../api/client'
 
 export default function Coupons() {
   const { id } = useParams()
@@ -15,7 +17,7 @@ export default function Coupons() {
     terms_conditions: ''
   })
   const [editing, setEditing] = useState(null)
-  const [showForm, setShowForm] = useState(false)   // ✅ toggle for add form
+  const [showForm, setShowForm] = useState(false)
 
   useEffect(() => {
     loadCoupons()
@@ -23,7 +25,8 @@ export default function Coupons() {
 
   async function loadCoupons() {
     try {
-      const res = await fetch(`http://localhost:8000/coupons?business_id=${id}&limit=20&offset=0`)
+      // 2. Use API_BASE
+      const res = await fetch(`${API_BASE}/coupons?business_id=${id}&limit=20&offset=0`)
       const data = await res.json()
       setCoupons(data)
     } catch (err) {
@@ -33,13 +36,14 @@ export default function Coupons() {
 
   async function createCoupon() {
     try {
-      await fetch(`http://localhost:8000/coupons`, {
+      // 3. Use API_BASE
+      await fetch(`${API_BASE}/coupons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ business_id: id, ...form })
       })
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
-      setShowForm(false)   // ✅ hide form after adding
+      setShowForm(false)
       loadCoupons()
     } catch (err) {
       console.error(err)
@@ -48,7 +52,8 @@ export default function Coupons() {
 
   async function updateCoupon(couponId) {
     try {
-      await fetch(`http://localhost:8000/coupons/${couponId}`, {
+      // 4. Use API_BASE
+      await fetch(`${API_BASE}/coupons/${couponId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -63,7 +68,8 @@ export default function Coupons() {
 
   async function deleteCoupon(couponId) {
     try {
-      await fetch(`http://localhost:8000/coupons/${couponId}`, { method: 'DELETE' })
+      // 5. Use API_BASE
+      await fetch(`${API_BASE}/coupons/${couponId}`, { method: 'DELETE' })
       loadCoupons()
     } catch (err) {
       console.error(err)

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
-import '../../styles/dashboard.css'   // ✅ import dashboard styles
+import '../../styles/dashboard.css'
+// 1. Import API_BASE to handle the connection URL
+import { API_BASE } from '../../api/client'
 
 export default function Metadata() {
   const { id } = useParams()
@@ -13,7 +15,8 @@ export default function Metadata() {
 
   async function loadMetadata() {
     try {
-      const res = await fetch(`http://localhost:8000/ai-metadata?business_id=${id}&limit=20&offset=0`)
+      // Fetch metadata using the dynamic API_BASE
+      const res = await fetch(`${API_BASE}/ai-metadata?business_id=${id}&limit=20&offset=0`)
       const data = await res.json()
       setMetadata(data)
     } catch (err) {
@@ -23,7 +26,8 @@ export default function Metadata() {
 
   async function generateMetadata() {
     try {
-      await fetch(`http://localhost:8000/ai-metadata/generate?business_id=${id}`, {
+      // Post request to generate metadata
+      await fetch(`${API_BASE}/ai-metadata/generate?business_id=${id}`, {
         method: 'POST'
       })
       loadMetadata()
@@ -34,7 +38,8 @@ export default function Metadata() {
 
   async function deleteMetadata(metaId) {
     try {
-      await fetch(`http://localhost:8000/ai-metadata/${metaId}`, { method: 'DELETE' })
+      // Delete request
+      await fetch(`${API_BASE}/ai-metadata/${metaId}`, { method: 'DELETE' })
       loadMetadata()
     } catch (err) {
       console.error(err)

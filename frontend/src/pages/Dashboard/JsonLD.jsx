@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
-import '../../styles/dashboard.css'   // ✅ make sure this is imported
+import '../../styles/dashboard.css'
+// 1. Import API_BASE
+import { API_BASE } from '../../api/client'
 
 export default function JsonLD() {
   const { id } = useParams()
@@ -15,7 +17,8 @@ export default function JsonLD() {
   async function loadFeeds() {
     setLoading(true)
     try {
-      const res = await fetch(`http://localhost:8000/jsonld?business_id=${id}`)
+      // 2. Use API_BASE
+      const res = await fetch(`${API_BASE}/jsonld?business_id=${id}`)
       if (res.ok) {
         const data = await res.json()
         setFeeds(Array.isArray(data) ? data : [])
@@ -32,7 +35,8 @@ export default function JsonLD() {
 
   async function generateFeed() {
     try {
-      await fetch(`http://localhost:8000/jsonld/generate/?business_id=${id}`, {
+      // 3. Use API_BASE (removed extra slash after 'generate' to be safe)
+      await fetch(`${API_BASE}/jsonld/generate?business_id=${id}`, {
         method: 'POST'
       })
       loadFeeds()
@@ -43,7 +47,8 @@ export default function JsonLD() {
 
   async function deleteFeed(feedId) {
     try {
-      await fetch(`http://localhost:8000/jsonld/${feedId}`, { method: 'DELETE' })
+      // 4. Use API_BASE
+      await fetch(`${API_BASE}/jsonld/${feedId}`, { method: 'DELETE' })
       loadFeeds()
     } catch (err) {
       console.error(err)

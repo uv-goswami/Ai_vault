@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
-import '../../styles/dashboard.css'   // ✅ make sure this is imported
+import '../../styles/dashboard.css'
+// 1. Import API_BASE
+import { API_BASE } from '../../api/client'
 
 export default function Visibility() {
   const { id } = useParams()
@@ -15,7 +17,8 @@ export default function Visibility() {
 
   async function runCheck() {
     try {
-      const res = await fetch(`http://localhost:8000/visibility/run?business_id=${id}`, {
+      // 2. Use API_BASE
+      const res = await fetch(`${API_BASE}/visibility/run?business_id=${id}`, {
         method: 'POST'
       })
       const data = await res.json()
@@ -27,7 +30,8 @@ export default function Visibility() {
 
   async function loadResults() {
     try {
-      const res = await fetch(`http://localhost:8000/visibility/result?business_id=${id}&limit=20&offset=0`)
+      // 3. Use API_BASE
+      const res = await fetch(`${API_BASE}/visibility/result?business_id=${id}&limit=20&offset=0`)
       const data = await res.json()
       setResults(data)
     } catch (err) {
@@ -37,7 +41,8 @@ export default function Visibility() {
 
   async function loadSuggestions() {
     try {
-      const res = await fetch(`http://localhost:8000/visibility/suggestion?business_id=${id}&limit=20&offset=0`)
+      // 4. Use API_BASE
+      const res = await fetch(`${API_BASE}/visibility/suggestion?business_id=${id}&limit=20&offset=0`)
       const data = await res.json()
       setSuggestions(data)
     } catch (err) {

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
-import { listMedia, uploadMediaFile, deleteMedia } from '../../api/client'
+// 1. Import API_BASE alongside the other functions
+import { listMedia, uploadMediaFile, deleteMedia, API_BASE } from '../../api/client'
 import '../../styles/dashboard.css'
 
 export default function Media() {
@@ -81,17 +82,17 @@ export default function Media() {
             <div key={m.asset_id} className="panel">
               <p><strong>Type:</strong> {m.media_type}</p>
 
-              {/* ✅ Render actual media */}
+              {/* ✅ Render actual media using API_BASE */}
               {m.media_type === 'image' && (
                 <img
-                  src={`http://localhost:8000${m.url}`}
+                  src={`${API_BASE}${m.url}`}
                   alt="Uploaded"
                   style={{ maxWidth: '100%', height: 'auto' }}
                 />
               )}
               {m.media_type === 'video' && (
                 <video controls style={{ maxWidth: '100%' }}>
-                  <source src={`http://localhost:8000${m.url}`} type="video/mp4" />
+                  <source src={`${API_BASE}${m.url}`} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               )}
@@ -99,7 +100,7 @@ export default function Media() {
                 <p>
                   <strong>Document:</strong>{' '}
                   <a
-                    href={`http://localhost:8000${m.url}`}
+                    href={`${API_BASE}${m.url}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
