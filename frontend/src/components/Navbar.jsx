@@ -5,7 +5,7 @@ import '../styles/Navbar.css'
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { userId, logout } = useAuth()
+  const { userId, businessId, logout } = useAuth()
   const navigate = useNavigate()   // ✅ add navigate hook
 
   const handleLogout = () => {
