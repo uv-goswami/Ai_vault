@@ -32,18 +32,30 @@ export default function Coupons() {
     }
   }
 
-  // ✅ Helper to fix date format (strips time part)
-  const formatDate = (dateString) => {
+  // ✅ Helper: Format date for HTML Input (YYYY-MM-DD)
+  const formatDateForInput = (dateString) => {
     if (!dateString) return ''
     return dateString.split('T')[0] 
   }
 
+  // ✅ Helper: Clean data before sending to Backend
+  // Converts empty strings "" to null so the backend doesn't reject them with 422
+  const getCleanPayload = (formData) => {
+    return {
+      ...formData,
+      valid_from: formData.valid_from === '' ? null : formData.valid_from,
+      valid_until: formData.valid_until === '' ? null : formData.valid_until
+    }
+  }
+
   async function createCoupon() {
     try {
+      const payload = getCleanPayload(form)
+      
       await fetch(`${API_BASE}/coupons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: id, ...form })
+        body: JSON.stringify({ business_id: id, ...payload })
       })
       // Reset form
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
@@ -56,10 +68,12 @@ export default function Coupons() {
 
   async function updateCoupon(couponId) {
     try {
+      const payload = getCleanPayload(form)
+
       await fetch(`${API_BASE}/coupons/${couponId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       })
       setEditing(null)
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
@@ -119,17 +133,17 @@ export default function Coupons() {
                     <p>{c.description}</p>
                     <p>Discount: {c.discount_value}</p>
                     {/* ✅ Display readable date */}
-                    <p>Valid: {formatDate(c.valid_from)} → {formatDate(c.valid_until)}</p>
+                    <p>Valid: {formatDateForInput(c.valid_from)} → {formatDateForInput(c.valid_until)}</p>
                     <p>{c.terms_conditions}</p>
                     <button onClick={() => {
                       setEditing(c.coupon_id)
-                      // ✅ FIX: Format dates before putting them into state
+                      // ✅ FIX: Format dates safely before putting into state
                       setForm({
                         code: c.code,
                         description: c.description || '',
                         discount_value: c.discount_value || '',
-                        valid_from: formatDate(c.valid_from),
-                        valid_until: formatDate(c.valid_until),
+                        valid_from: formatDateForInput(c.valid_from),
+                        valid_until: formatDateForInput(c.valid_until),
                         terms_conditions: c.terms_conditions || ''
                       })
                     }}>Edit</button>
