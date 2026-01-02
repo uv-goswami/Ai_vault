@@ -39,12 +39,15 @@ export default function Coupons() {
   }
 
   // ✅ Helper: Clean data before sending to Backend
-  // Converts empty strings "" to null so the backend doesn't reject them with 422
+  // IMPORTANT: Converts empty strings "" to null so the backend doesn't reject them
   const getCleanPayload = (formData) => {
     return {
-      ...formData,
-      valid_from: formData.valid_from === '' ? null : formData.valid_from,
-      valid_until: formData.valid_until === '' ? null : formData.valid_until
+      code: formData.code,
+      description: formData.description || null,
+      discount_value: formData.discount_value || null,
+      valid_from: formData.valid_from || null,
+      valid_until: formData.valid_until || null,
+      terms_conditions: formData.terms_conditions || null
     }
   }
 
@@ -52,17 +55,25 @@ export default function Coupons() {
     try {
       const payload = getCleanPayload(form)
       
-      await fetch(`${API_BASE}/coupons`, {
+      const res = await fetch(`${API_BASE}/coupons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ business_id: id, ...payload })
       })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        alert(`Error: ${JSON.stringify(errorData.detail)}`)
+        return
+      }
+
       // Reset form
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
       setShowForm(false)
       loadCoupons()
     } catch (err) {
       console.error(err)
+      alert("Network error occurred")
     }
   }
 
@@ -70,16 +81,26 @@ export default function Coupons() {
     try {
       const payload = getCleanPayload(form)
 
-      await fetch(`${API_BASE}/coupons/${couponId}`, {
+      const res = await fetch(`${API_BASE}/coupons/${couponId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error("Update failed:", errorData)
+        // This will tell you EXACTLY which field is causing the 422 error
+        alert(`Update failed: ${JSON.stringify(errorData.detail)}`) 
+        return
+      }
+
       setEditing(null)
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
       loadCoupons()
     } catch (err) {
       console.error(err)
+      alert("Network error occurred")
     }
   }
 
