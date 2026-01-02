@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from db.database import get_db
 from db import models
-from schemas.coupons import CouponCreate, CouponOut
+# ✅ Import CouponUpdate
+from schemas.coupons import CouponCreate, CouponOut, CouponUpdate
 from uuid import UUID
 from typing import List
 
@@ -46,21 +47,24 @@ def list_coupons(
         .all()
     )
 
-# ✅ Update coupon
+# ✅ UPDATED: Use CouponUpdate schema
 @router.patch("/{coupon_id}", response_model=CouponOut)
-def update_coupon(coupon_id: UUID, data: CouponCreate, db: Session = Depends(get_db)):
+def update_coupon(coupon_id: UUID, data: CouponUpdate, db: Session = Depends(get_db)):
     coupon = db.query(models.Coupon).filter_by(coupon_id=coupon_id).first()
     if not coupon:
         raise HTTPException(status_code=404, detail="Coupon not found")
 
-    for key, value in data.model_dump().items():
+    # exclude_unset=True ensures we only update fields sent by the frontend
+    update_data = data.model_dump(exclude_unset=True)
+    
+    for key, value in update_data.items():
         setattr(coupon, key, value)
 
     db.commit()
     db.refresh(coupon)
     return coupon
 
-# ✅ Delete coupon
+# Delete coupon
 @router.delete("/{coupon_id}", response_model=dict)
 def delete_coupon(coupon_id: UUID, db: Session = Depends(get_db)):
     coupon = db.query(models.Coupon).filter_by(coupon_id=coupon_id).first()

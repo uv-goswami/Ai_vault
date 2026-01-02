@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
 import '../../styles/dashboard.css'
+// 1. Import API_BASE
 import { API_BASE } from '../../api/client'
 
 export default function Coupons() {
   const { id } = useParams()
   const [coupons, setCoupons] = useState([])
+  
+  // Form State
   const [form, setForm] = useState({
     code: '',
     description: '',
@@ -15,6 +18,7 @@ export default function Coupons() {
     valid_until: '',
     terms_conditions: ''
   })
+  
   const [editing, setEditing] = useState(null)
   const [showForm, setShowForm] = useState(false)
 
@@ -33,13 +37,14 @@ export default function Coupons() {
   }
 
   // ✅ Helper: Format date for HTML Input (YYYY-MM-DD)
+  // This prevents the "2026-01-25T00:00:00" error in the input field
   const formatDateForInput = (dateString) => {
     if (!dateString) return ''
     return dateString.split('T')[0] 
   }
 
   // ✅ Helper: Clean data before sending to Backend
-  // IMPORTANT: Converts empty strings "" to null so the backend doesn't reject them
+  // IMPORTANT: Converts empty strings "" to null so the backend doesn't reject them with 422
   const getCleanPayload = (formData) => {
     return {
       code: formData.code,
@@ -53,8 +58,10 @@ export default function Coupons() {
 
   async function createCoupon() {
     try {
+      // 1. Clean the payload (empty strings -> null)
       const payload = getCleanPayload(form)
       
+      // 2. Send request
       const res = await fetch(`${API_BASE}/coupons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,7 +74,7 @@ export default function Coupons() {
         return
       }
 
-      // Reset form
+      // 3. Reset form and reload
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
       setShowForm(false)
       loadCoupons()
@@ -79,22 +86,27 @@ export default function Coupons() {
 
   async function updateCoupon(couponId) {
     try {
+      // 1. Clean the payload
       const payload = getCleanPayload(form)
 
+      // 2. Add business_id explicitly (Safest approach for validation)
+      const fullPayload = { business_id: id, ...payload }
+
+      // 3. Send request
       const res = await fetch(`${API_BASE}/coupons/${couponId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(fullPayload)
       })
 
       if (!res.ok) {
         const errorData = await res.json()
         console.error("Update failed:", errorData)
-        // This will tell you EXACTLY which field is causing the 422 error
         alert(`Update failed: ${JSON.stringify(errorData.detail)}`) 
         return
       }
 
+      // 4. Reset and reload
       setEditing(null)
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
       loadCoupons()
@@ -134,7 +146,7 @@ export default function Coupons() {
                     <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Description" />
                     <input value={form.discount_value} onChange={e => setForm({ ...form, discount_value: e.target.value })} placeholder="Discount Value" />
                     
-                    {/* ✅ Corrected Date Inputs with Labels */}
+                    {/* ✅ Date Inputs */}
                     <label style={{fontSize: '0.8rem', color: '#666', marginTop: '5px', display: 'block'}}>Valid From:</label>
                     <input type="date" value={form.valid_from} onChange={e => setForm({ ...form, valid_from: e.target.value })} />
                     
@@ -153,12 +165,14 @@ export default function Coupons() {
                     <strong>{c.code}</strong>
                     <p>{c.description}</p>
                     <p>Discount: {c.discount_value}</p>
+                    
                     {/* ✅ Display readable date */}
                     <p>Valid: {formatDateForInput(c.valid_from)} → {formatDateForInput(c.valid_until)}</p>
                     <p>{c.terms_conditions}</p>
+                    
                     <button onClick={() => {
                       setEditing(c.coupon_id)
-                      // ✅ FIX: Format dates safely before putting into state
+                      // ✅ Load data into form safely
                       setForm({
                         code: c.code,
                         description: c.description || '',
