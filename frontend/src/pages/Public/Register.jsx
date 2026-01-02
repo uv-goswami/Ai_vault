@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom' // Added Link here
 // Import all necessary API functions
 import { createUser, getBusinessByOwner, updateBusiness } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
@@ -139,7 +139,8 @@ export default function Register() {
         </form>
 
         <p className="register-footer">
-          Already have an account? <a href="/login">Login</a>
+          {/* Replaced <a> with <Link> to fix 404 */}
+          Already have an account? <Link to="/login">Login</Link>
         </p>
       </div>
     </div>

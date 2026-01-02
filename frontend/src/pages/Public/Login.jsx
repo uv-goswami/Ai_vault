@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom' // Added Link here
 import { login as loginUser, getBusinessByOwner } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
 import '../../styles/login.css'
@@ -68,6 +68,11 @@ export default function Login() {
           {error && <p className="error">{error}</p>}
           <button type="submit" className="btn primary full-width">Login</button>
         </form>
+
+        {/* Added footer link for better navigation */}
+        <p style={{ marginTop: '1rem', textAlign: 'center' }}>
+          Don't have an account? <Link to="/register">Register</Link>
+        </p>
       </div>
     </div>
   )

@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
 import StatCard from '../../components/StatCard'
 import '../../styles/dashboard.css'
+// 1. Import the dynamic API configuration
+import { API_BASE } from '../../api/client'
 
 export default function DashboardHome() {
   const { id } = useParams()
@@ -20,7 +22,8 @@ export default function DashboardHome() {
 
   async function loadProfile() {
     try {
-      const res = await fetch(`http://localhost:8000/business/${id}`)
+      // 2. Use API_BASE instead of localhost
+      const res = await fetch(`${API_BASE}/business/${id}`)
       setProfileOk(res.ok)
     } catch (err) {
       console.error(err)
@@ -30,7 +33,8 @@ export default function DashboardHome() {
 
   async function loadServices() {
     try {
-      const res = await fetch(`http://localhost:8000/services?business_id=${id}&limit=100&offset=0`)
+      // 3. Use API_BASE
+      const res = await fetch(`${API_BASE}/services?business_id=${id}&limit=100&offset=0`)
       if (res.ok) {
         const data = await res.json()
         setServiceCount(Array.isArray(data) ? data.length : 0)
@@ -45,7 +49,8 @@ export default function DashboardHome() {
 
   async function loadVisibility() {
     try {
-      const res = await fetch(`http://localhost:8000/visibility/result?business_id=${id}&limit=1&offset=0`)
+      // 4. Use API_BASE
+      const res = await fetch(`${API_BASE}/visibility/result?business_id=${id}&limit=1&offset=0`)
       if (res.ok) {
         const data = await res.json()
         if (Array.isArray(data) && data.length > 0) {
