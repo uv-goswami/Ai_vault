@@ -1,8 +1,10 @@
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
-/**
- * Generic API helper to handle fetch requests and global error handling
- */
+// 2. BACKWARD COMPATIBILITY: Export 'BASE' pointing to the same thing.
+// This ensures that if any other file imports { BASE }, it still works.
+export const BASE = API_BASE
+
+
 async function api(path, init) {
 
   const url = `${BASE}${path}`
