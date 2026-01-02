@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
+// 1. Import API functions (They already use API_BASE internally now)
 import { getBusiness, updateBusiness } from '../../api/client'
 import '../../styles/dashboard.css'
 
@@ -21,10 +22,12 @@ export default function Profile() {
     setLoading(true)
     setError('')
     try {
+      // This uses the client.js function, which now points to the live server
       const data = await getBusiness(id)
       setBusiness(data)
       setForm(toEditable(data))
     } catch (e) {
+      console.error(e)
       setError('Failed to load business profile.')
     } finally {
       setLoading(false)
@@ -66,6 +69,7 @@ export default function Profile() {
       setForm(toEditable(updated))
       setEditing(false)
     } catch (e) {
+      console.error(e)
       setError('Failed to save changes. Please try again.')
     } finally {
       setSaving(false)
