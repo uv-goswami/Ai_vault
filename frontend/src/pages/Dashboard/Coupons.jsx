@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
 import '../../styles/dashboard.css'
-// 1. Import API_BASE
 import { API_BASE } from '../../api/client'
 
 export default function Coupons() {
@@ -25,7 +24,6 @@ export default function Coupons() {
 
   async function loadCoupons() {
     try {
-      // 2. Use API_BASE
       const res = await fetch(`${API_BASE}/coupons?business_id=${id}&limit=20&offset=0`)
       const data = await res.json()
       setCoupons(data)
@@ -34,14 +32,20 @@ export default function Coupons() {
     }
   }
 
+  // ✅ Helper to fix date format (strips time part)
+  const formatDate = (dateString) => {
+    if (!dateString) return ''
+    return dateString.split('T')[0] 
+  }
+
   async function createCoupon() {
     try {
-      // 3. Use API_BASE
       await fetch(`${API_BASE}/coupons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ business_id: id, ...form })
       })
+      // Reset form
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
       setShowForm(false)
       loadCoupons()
@@ -52,7 +56,6 @@ export default function Coupons() {
 
   async function updateCoupon(couponId) {
     try {
-      // 4. Use API_BASE
       await fetch(`${API_BASE}/coupons/${couponId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -68,7 +71,6 @@ export default function Coupons() {
 
   async function deleteCoupon(couponId) {
     try {
-      // 5. Use API_BASE
       await fetch(`${API_BASE}/coupons/${couponId}`, { method: 'DELETE' })
       loadCoupons()
     } catch (err) {
@@ -96,31 +98,42 @@ export default function Coupons() {
                     <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="Code" />
                     <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Description" />
                     <input value={form.discount_value} onChange={e => setForm({ ...form, discount_value: e.target.value })} placeholder="Discount Value" />
+                    
+                    {/* ✅ Corrected Date Inputs with Labels */}
+                    <label style={{fontSize: '0.8rem', color: '#666', marginTop: '5px', display: 'block'}}>Valid From:</label>
                     <input type="date" value={form.valid_from} onChange={e => setForm({ ...form, valid_from: e.target.value })} />
+                    
+                    <label style={{fontSize: '0.8rem', color: '#666', marginTop: '5px', display: 'block'}}>Valid Until:</label>
                     <input type="date" value={form.valid_until} onChange={e => setForm({ ...form, valid_until: e.target.value })} />
+                    
                     <textarea value={form.terms_conditions} onChange={e => setForm({ ...form, terms_conditions: e.target.value })} placeholder="Terms & Conditions" />
-                    <button onClick={() => updateCoupon(c.coupon_id)}>Save</button>
-                    <button onClick={() => setEditing(null)}>Cancel</button>
+                    
+                    <div style={{marginTop: '10px'}}>
+                        <button onClick={() => updateCoupon(c.coupon_id)}>Save</button>
+                        <button className="ghost" onClick={() => setEditing(null)}>Cancel</button>
+                    </div>
                   </>
                 ) : (
                   <>
                     <strong>{c.code}</strong>
                     <p>{c.description}</p>
                     <p>Discount: {c.discount_value}</p>
-                    <p>Valid: {c.valid_from} → {c.valid_until}</p>
+                    {/* ✅ Display readable date */}
+                    <p>Valid: {formatDate(c.valid_from)} → {formatDate(c.valid_until)}</p>
                     <p>{c.terms_conditions}</p>
                     <button onClick={() => {
                       setEditing(c.coupon_id)
+                      // ✅ FIX: Format dates before putting them into state
                       setForm({
                         code: c.code,
-                        description: c.description,
-                        discount_value: c.discount_value,
-                        valid_from: c.valid_from,
-                        valid_until: c.valid_until,
-                        terms_conditions: c.terms_conditions
+                        description: c.description || '',
+                        discount_value: c.discount_value || '',
+                        valid_from: formatDate(c.valid_from),
+                        valid_until: formatDate(c.valid_until),
+                        terms_conditions: c.terms_conditions || ''
                       })
                     }}>Edit</button>
-                    <button onClick={() => deleteCoupon(c.coupon_id)}>Delete</button>
+                    <button className="ghost" onClick={() => deleteCoupon(c.coupon_id)}>Delete</button>
                   </>
                 )}
               </div>
@@ -138,11 +151,19 @@ export default function Coupons() {
               <input placeholder="Code" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
               <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
               <input placeholder="Discount Value" value={form.discount_value} onChange={e => setForm({ ...form, discount_value: e.target.value })} />
+              
+              <label style={{fontSize: '0.8rem', color: '#666', marginTop: '5px', display: 'block'}}>Valid From:</label>
               <input type="date" value={form.valid_from} onChange={e => setForm({ ...form, valid_from: e.target.value })} />
+              
+              <label style={{fontSize: '0.8rem', color: '#666', marginTop: '5px', display: 'block'}}>Valid Until:</label>
               <input type="date" value={form.valid_until} onChange={e => setForm({ ...form, valid_until: e.target.value })} />
+              
               <textarea placeholder="Terms & Conditions" value={form.terms_conditions} onChange={e => setForm({ ...form, terms_conditions: e.target.value })} />
-              <button onClick={createCoupon}>Add Coupon</button>
-              <button onClick={() => setShowForm(false)}>Cancel</button>
+              
+              <div style={{marginTop: '10px'}}>
+                  <button onClick={createCoupon}>Add Coupon</button>
+                  <button className="ghost" onClick={() => setShowForm(false)}>Cancel</button>
+              </div>
             </div>
           </div>
         )}
