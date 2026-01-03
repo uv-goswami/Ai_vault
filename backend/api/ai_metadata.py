@@ -15,6 +15,13 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 router = APIRouter(prefix="/ai-metadata", tags=["AI Metadata"])
 
+# --- Helper to clean lists ---
+def ensure_string(value):
+    """Converts lists/arrays to a clean comma-separated string."""
+    if isinstance(value, list):
+        return ", ".join(str(v) for v in value)
+    return str(value) if value is not None else ""
+
 # --- CREATE (Manual) ---
 @router.post("/", response_model=AiMetadataOut)
 def create_metadata(data: AiMetadataCreate, db: Session = Depends(get_db)):
@@ -73,13 +80,12 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Business not found")
 
     # 2. Fetch Related Data (Services, Hours) safely
-    # We use try/except block or check if the relationship exists to prevent errors
     services_list = []
     try:
         services_q = db.query(models.Service).filter_by(business_id=business_id).all()
         services_list = [f"{s.name} (${s.price})" for s in services_q]
     except Exception:
-        pass # Ignore if table doesn't exist or error
+        pass 
 
     op_info_str = "Not listed"
     try:
@@ -90,7 +96,6 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
         pass
 
     # 3. Construct a RICH Context Prompt
-    # We handle NULLs using `or 'N/A'` so the AI knows what's missing
     context_text = f"""
     Business Name: {business.name}
     Type: {business.business_type}
@@ -108,18 +113,18 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
     """
 
     prompt = f"""
-    Act as a Senior SEO Specialist and Data Enricher. 
-    Analyze the following local business profile deeply:
+    Act as a Senior SEO Specialist. 
+    Analyze this local business and generate optimized metadata.
 
     {context_text}
 
-    Based ONLY on this data (do not hallucinate features not mentioned), generate a JSON object with:
-    1. "keywords": 20 very specific SEO keywords (combine location + service + slogan).
-    2. "extracted_insights": A compelling 1-sentence marketing pitch that highlights their specific slogan or unique services.
-    3. "intent_labels": 3 User Intents (e.g., "Booking", "Inquiry", "Emergency").
-    4. "detected_entities": A string list of the most important entities (City, Specific Service Names, Brands).
+    Return ONLY a valid JSON object with these 4 keys. 
+    IMPORTANT: The values for 'keywords', 'intent_labels', and 'detected_entities' MUST be simple comma-separated STRINGS, not arrays.
 
-    Return ONLY raw JSON. No markdown blocks.
+    1. "keywords": A single string of 20 comma-separated specific keywords (combine location + service + slogan).
+    2. "extracted_insights": A compelling 1-sentence marketing pitch.
+    3. "intent_labels": A single string of 3 user intents (e.g., "Booking, Inquiry, Discovery").
+    4. "detected_entities": A single string listing important entities (City, Services, Brands).
     """
 
     try:
@@ -131,14 +136,20 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         ai_data = json.loads(clean_text)
 
+        # ✅ FIX: Force conversion of Lists to clean comma-separated Strings
+        keywords_str = ensure_string(ai_data.get("keywords"))
+        insights_str = ensure_string(ai_data.get("extracted_insights"))
+        intents_str = ensure_string(ai_data.get("intent_labels"))
+        entities_str = ensure_string(ai_data.get("detected_entities"))
+
         # Save to DB (Update if exists)
         existing_meta = db.query(models.AiMetadata).filter(models.AiMetadata.business_id == business_id).first()
         
         if existing_meta:
-            existing_meta.keywords = ai_data.get("keywords")
-            existing_meta.extracted_insights = ai_data.get("extracted_insights")
-            existing_meta.intent_labels = ai_data.get("intent_labels")
-            existing_meta.detected_entities = ai_data.get("detected_entities")
+            existing_meta.keywords = keywords_str
+            existing_meta.extracted_insights = insights_str
+            existing_meta.intent_labels = intents_str
+            existing_meta.detected_entities = entities_str
             existing_meta.generated_at = datetime.utcnow()
             db.commit()
             db.refresh(existing_meta)
@@ -146,10 +157,10 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
         else:
             new_meta = models.AiMetadata(
                 business_id=business_id,
-                keywords=ai_data.get("keywords"),
-                extracted_insights=ai_data.get("extracted_insights"),
-                intent_labels=ai_data.get("intent_labels"),
-                detected_entities=ai_data.get("detected_entities"),
+                keywords=keywords_str,
+                extracted_insights=insights_str,
+                intent_labels=intents_str,
+                detected_entities=entities_str,
                 generated_at=datetime.utcnow(),
             )
             db.add(new_meta)
