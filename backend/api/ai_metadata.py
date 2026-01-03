@@ -15,6 +15,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 router = APIRouter(prefix="/ai-metadata", tags=["AI Metadata"])
 
+# --- CREATE ---
 @router.post("/", response_model=AiMetadataOut)
 def create_metadata(data: AiMetadataCreate, db: Session = Depends(get_db)):
     business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
@@ -27,6 +28,7 @@ def create_metadata(data: AiMetadataCreate, db: Session = Depends(get_db)):
     db.refresh(new_metadata)
     return new_metadata
 
+# --- LIST ---
 @router.get("/", response_model=List[AiMetadataOut])
 def list_metadata(
     business_id: UUID = Query(...),
@@ -43,6 +45,7 @@ def list_metadata(
         .all()
     )
 
+# --- GET ONE ---
 @router.get("/{metadata_id}", response_model=AiMetadataOut)
 def get_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
     metadata = db.query(models.AiMetadata).filter_by(ai_metadata_id=metadata_id).first()
@@ -50,7 +53,7 @@ def get_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Metadata not found")
     return metadata
 
-# ✅ DELETE ENDPOINT (Fixes the 405 Method Not Allowed error)
+# --- DELETE (Fixes your 405 error) ---
 @router.delete("/{metadata_id}")
 def delete_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
     metadata = db.query(models.AiMetadata).filter_by(ai_metadata_id=metadata_id).first()
@@ -61,7 +64,7 @@ def delete_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Metadata deleted successfully"}
 
-# ✅ GENERATE ENDPOINT (Using your specific model list)
+# --- GENERATE (Fixes your 429/404 error) ---
 @router.post("/generate", response_model=AiMetadataOut)
 def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_db)):
     business = db.query(models.BusinessProfile).filter_by(business_id=business_id).first()
@@ -84,9 +87,9 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
     """
 
     try:
-        # ✅ UPDATED: Using a model explicitly listed in your output
-        # 'gemini-2.0-flash' is the safest bet from your list.
-        model = genai.GenerativeModel('models/gemini-2.0-flash-lite')
+        # ✅ FIX: Use 'gemini-1.5-flash'
+        # This is the standard free model. Do NOT use 'lite' or '2.0' as they hit limits instantly.
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         response = model.generate_content(prompt)
         
@@ -94,7 +97,7 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         ai_data = json.loads(clean_text)
 
-        # Save to DB
+        # Save to DB (Update if exists)
         existing_meta = db.query(models.AiMetadata).filter(models.AiMetadata.business_id == business_id).first()
         
         if existing_meta:
@@ -122,4 +125,5 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
 
     except Exception as e:
         print(f"AI Generation Error: {e}")
+        # If we still hit a rate limit, show the specific message
         raise HTTPException(status_code=500, detail=f"AI Error: {str(e)}")
