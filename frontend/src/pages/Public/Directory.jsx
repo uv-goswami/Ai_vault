@@ -72,33 +72,46 @@ export default function Directory() {
               className="directory-card"
               itemScope
               itemType="https://schema.org/LocalBusiness"
+              // Added some padding for better spacing with the new header layout
+              style={{ padding: '20px' }} 
             >
-              {/* Image Section - Only renders if media exists */}
-              {biz.media && biz.media.length > 0 ? (
-                <img
-                  src={getImageUrl(biz.media[0].url)}
-                  alt={biz.name}
-                  className="directory-img"
-                  onError={(e) => {
-                    // If image fails to load, simply hide this element
-                    e.target.style.display = 'none'
-                  }}
-                />
-              ) : null}
               
-              {/* NO Placeholder Div here anymore. If no image, header sits at the top. */}
+              {/* Header with small Logo layout */}
+              <header className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                
+                {/* Logo Section - Only renders if media exists */}
+                {biz.media && biz.media.length > 0 ? (
+                  <img
+                    src={getImageUrl(biz.media[0].url)}
+                    alt={biz.name}
+                    // Inline styles for logo look: small, square, rounded corners
+                    style={{ 
+                        width: '60px', 
+                        height: '60px', 
+                        objectFit: 'cover', 
+                        borderRadius: '8px',
+                        border: '1px solid #eee',
+                        flexShrink: 0 // Prevents squishing
+                    }}
+                    onError={(e) => {
+                      // If image fails to load, simply hide this element so text moves left
+                      e.target.style.display = 'none'
+                    }}
+                  />
+                ) : null}
 
-              {/* Header */}
-              <header className="card-header">
-                <h2 itemProp="name">{biz.name}</h2>
-                <span className="biz-type">
-                  {biz.business_type || "Business"}
-                </span>
+                {/* Text Section (Name & Type) */}
+                <div style={{ flexGrow: 1 }}>
+                    <h2 itemProp="name" style={{ margin: 0, fontSize: '1.3rem' }}>{biz.name}</h2>
+                    <span className="biz-type" style={{ display:'block', marginTop:'4px', fontSize:'0.9rem', color:'#666' }}>
+                    {biz.business_type || "Business"}
+                    </span>
+                </div>
               </header>
 
               {/* Description (Only show if exists) */}
               {biz.description && (
-                <p className="card-description" itemProp="description">
+                <p className="card-description" itemProp="description" style={{ marginBottom: '15px' }}>
                   {biz.description.length > 90 
                     ? biz.description.substring(0, 90) + "..." 
                     : biz.description}
@@ -150,6 +163,7 @@ export default function Directory() {
                 href={`/business/${biz.business_id}`}
                 className="card-link"
                 itemProp="url"
+                style={{ marginTop: '15px', display: 'block', textAlign: 'center' }}
               >
                 View Details
               </a>
