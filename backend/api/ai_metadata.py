@@ -86,7 +86,7 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
     try:
         # ✅ UPDATED: Using a model explicitly listed in your output
         # 'gemini-2.0-flash' is the safest bet from your list.
-        model = genai.GenerativeModel('models/gemini-2.0-flash')
+        model = genai.GenerativeModel('models/gemini-2.0-flash-lite')
         
         response = model.generate_content(prompt)
         
