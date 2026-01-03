@@ -29,7 +29,7 @@ def ensure_string(value):
     return str(value) if value is not None else ""
 
 # -------------------------
-# STANDARD CRUD (Keep unchanged)
+# STANDARD CRUD
 # -------------------------
 @router.post("/check", response_model=VisibilityCheckRequestOut)
 def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depends(get_db)):
@@ -134,7 +134,7 @@ def get_suggestion(suggestion_id: UUID, db: Session = Depends(get_db)):
     return suggestion
 
 # -------------------------
-# ✅ STRICT VISIBILITY CHECKER
+# ✅ STRICT VISIBILITY CHECKER (FIXED)
 # -------------------------
 @router.post("/run", response_model=VisibilityCheckResultOut)
 def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)):
@@ -158,12 +158,14 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     db.add(check)
     db.commit()
 
-    # 3. Construct HARSH Prompt
-    services_str = ", ".join([s.name for s in services]) if services else "None"
+    # 3. Construct Prompt (Safe for None types)
+    # Ensure no NoneType errors in f-string
+    s_names = [s.name for s in services if s.name]
+    services_str = ", ".join(s_names) if s_names else "None"
     
     prompt = f"""
-    Act as a Strict SEO Auditor. You are grading this business for visibility to AI Bots and Humans.
-    BE HARSH. Do not give participation points.
+    Act as a Strict SEO Auditor. Grade this business for visibility to AI Agents and Humans.
+    BE HARSH.
     
     DATA:
     - Name: {business.name}
@@ -175,38 +177,36 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     - JSON-LD Schema: {'Yes' if jsonld_exists else 'NO'}
 
     SCORING RULES:
-    - Start at 0.
-    - JSON-LD Missing? MAX SCORE = 40. (Automatic Fail for Bots).
-    - No Images? Deduct 20 points.
-    - Description too short (<50 chars)? Deduct 15 points.
-    - No Services? Deduct 20 points.
-    - Max score 100 is only for PERFECT profiles.
+    - Base Score = 0.
+    - JSON-LD Missing? Max possible score is 40.
+    - No Services? Deduct 20.
+    - No Images? Deduct 20.
+    - Description < 50 chars? Deduct 15.
+    - Perfect Profile = 100.
 
-    Return valid raw JSON (no markdown) with:
+    Return valid raw JSON (no markdown) with keys:
     1. "score": Number (0-100).
-    2. "bot_analysis": String (Focus on JSON-LD).
-    3. "human_analysis": String (Focus on trust/visuals).
-    4. "issues": List of strings (The specific failures).
-    5. "recommendations": List of strings (Actionable fixes).
+    2. "bot_analysis": String (Bot readability).
+    3. "human_analysis": String (Human appeal).
+    4. "issues": List[String] (Failures).
+    5. "recommendations": List[String] (Fixes).
     """
 
     try:
-        # ✅ Using 'gemini-1.5-flash' (Most reliable for free tier)
-        # If this fails, the 'except' block will handle it strictly now.
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # ✅ SWITCHED TO 2.5 (Using full path to be safe)
+        model = genai.GenerativeModel('models/gemini-2.5-flash')
         
         response = model.generate_content(prompt)
         
         # Robust Parsing
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         
-        # If response is empty or broken, raise error to hit the fallback
         if not clean_text:
-            raise ValueError("Empty AI response")
+            raise ValueError("Empty AI response received")
 
         ai_data = json.loads(clean_text)
 
-        score = float(ai_data.get("score", 40)) # Default to 40 if AI forgets score
+        score = float(ai_data.get("score", 0))
         bot_txt = ai_data.get("bot_analysis", "Unknown")
         human_txt = ai_data.get("human_analysis", "Unknown")
         issues_str = ensure_string(ai_data.get("issues", []))
@@ -232,38 +232,37 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     except Exception as e:
         print(f"❌ AI VISIBILITY CHECK FAILED: {str(e)}")
         
-        # ✅ STRICT FALLBACK SCORING
-        # If AI fails, we grade manually but strictly.
+        # ✅ TRANSPARENT ERROR REPORTING
+        # We now return the ACTUAL error in the issues list so you know what's wrong.
+        error_msg = str(e)
         
         strict_score = 0
-        issues = ["AI Service Unreachable"]
-        recs = ["Retry audit later"]
+        issues = [f"AI Error: {error_msg}"] # <--- THIS IS KEY
+        recs = ["Check API Quota", "Verify Data"]
 
-        # Manual strict logic
-        if jsonld_exists: 
-            strict_score += 30
-        else:
+        # Manual strict logic continues...
+        if not jsonld_exists:
             issues.append("CRITICAL: Missing JSON-LD")
             recs.append("Generate JSON-LD immediately")
+        else:
+            strict_score += 30
 
-        if len(services) >= 3:
-            strict_score += 20
-        elif len(services) == 0:
+        if len(services) == 0:
             issues.append("No services listed")
-            recs.append("Add at least 3 services")
-        
-        if media_count >= 3:
+        else:
             strict_score += 20
-        else:
-            issues.append("Not enough images")
         
-        if business.description and len(business.description) > 50:
-            strict_score += 10
+        if media_count < 3:
+            issues.append("Not enough images (Need 3+)")
         else:
+            strict_score += 20
+        
+        if not business.description or len(business.description) < 50:
             issues.append("Description too short or missing")
+        else:
+            strict_score += 10
 
-        # Cap fallback score at 50 if AI failed
-        final_score = min(strict_score, 50)
+        final_score = min(strict_score, 50) # Cap fallback at 50
 
         result = models.VisibilityCheckResult(
             request_id=check.request_id,
