@@ -50,7 +50,7 @@ def get_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Metadata not found")
     return metadata
 
-# ✅ FIXED: Added DELETE endpoint
+# ✅ DELETE ENDPOINT (Fixes the 405 Method Not Allowed error)
 @router.delete("/{metadata_id}")
 def delete_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
     metadata = db.query(models.AiMetadata).filter_by(ai_metadata_id=metadata_id).first()
@@ -61,7 +61,7 @@ def delete_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Metadata deleted successfully"}
 
-# ✅ FIXED: AI Generator with stable model name
+# ✅ GENERATE ENDPOINT (Using your specific model list)
 @router.post("/generate", response_model=AiMetadataOut)
 def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_db)):
     business = db.query(models.BusinessProfile).filter_by(business_id=business_id).first()
@@ -84,9 +84,9 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
     """
 
     try:
-        # ✅ SWITCHED to 'gemini-pro' which is the stable free tier model
-        # If this still fails, try 'models/gemini-1.5-flash'
-        model = genai.GenerativeModel('gemini-pro')
+        # ✅ UPDATED: Using a model explicitly listed in your output
+        # 'gemini-2.0-flash' is the safest bet from your list.
+        model = genai.GenerativeModel('models/gemini-2.0-flash')
         
         response = model.generate_content(prompt)
         
@@ -122,5 +122,4 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
 
     except Exception as e:
         print(f"AI Generation Error: {e}")
-        # Return HTTP 500 with clear error message
         raise HTTPException(status_code=500, detail=f"AI Error: {str(e)}")
