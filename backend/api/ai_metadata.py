@@ -81,7 +81,7 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
 
     try:
         # 3. Call Gemini (The Magic)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        model = genai.GenerativeModel('gemini-1.5-flash-001')
         response = model.generate_content(prompt)
         
         # 4. Clean & Parse the Response
