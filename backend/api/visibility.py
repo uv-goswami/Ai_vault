@@ -151,16 +151,17 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     jsonld_exists = db.query(models.JsonLDFeed).filter_by(business_id=business_id).count() > 0
 
     # 2. Log request
+    # ✅ FIX: changed "ai_audit" to "visibility" to match your DB Enum
     check = models.VisibilityCheckRequest(
         business_id=business_id,
-        check_type="visibility", # ✅ FIXED: Changed from "ai_audit" to "visibility"
+        check_type="visibility", 
         input_data=f"Services: {len(services)}, Media: {media_count}, JSON-LD: {jsonld_exists}",
         requested_at=datetime.utcnow()
     )
     db.add(check)
     db.commit()
 
-    # 3. Construct AI Prompt
+    # 3. Construct AI Prompt with WHOLE Data
     services_str = ", ".join([s.name for s in services]) if services else "None"
     
     prompt = f"""
@@ -180,12 +181,12 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     1. "score": A number 0-100 (Overall health).
     2. "bot_analysis": A short string summarizing if bots can read this (mention JSON-LD).
     3. "human_analysis": A short string summarizing human appeal (media, clarity).
-    4. "issues": A list of specific strings describing what is missing.
-    5. "recommendations": A list of specific strings on how to fix it.
+    4. "issues": A list of specific strings describing what is missing (e.g. "Missing JSON-LD", "No Services").
+    5. "recommendations": A list of specific strings on how to fix it (e.g. "Generate JSON-LD in the Dashboard", "Add at least 3 services").
     """
 
     try:
-        # Using gemini-2.5-flash as per your preference (or switch to 1.5-flash if needed)
+        # Using gemini-1.5-flash (Standard Free Tier)
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         
