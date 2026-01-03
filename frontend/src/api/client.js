@@ -6,7 +6,7 @@ export const BASE = API_BASE
 // Key = URL, Value = JSON Data
 const REQUEST_CACHE = new Map()
 
-// ✅ NEW: Helper to read cache synchronously (Essential for SWR Pattern)
+// ✅ Helper to read cache synchronously (Essential for SWR Pattern)
 export function getFromCache(path) {
   const url = `${BASE}${path}`
   return REQUEST_CACHE.get(url) || null
@@ -17,7 +17,6 @@ async function api(path, init = {}) {
   const method = init.method || 'GET'
 
   // 1. CACHE HIT: If we have the data, return it INSTANTLY (0ms latency)
-  // We only cache GET requests.
   if (method === 'GET' && REQUEST_CACHE.has(url)) {
     return REQUEST_CACHE.get(url)
   }
@@ -32,7 +31,7 @@ async function api(path, init = {}) {
   if (!res.ok) {
     const text = await res.text()
 
-    // Special handling for 404 on operational info (return null instead of throwing)
+    // Special handling for 404 on operational info
     if (res.status === 404 && path.includes('operational-info')) {
         return null;
     }
@@ -49,8 +48,6 @@ async function api(path, init = {}) {
   }
 
   // 5. CACHE INVALIDATION: Write-Through Logic
-  // If we Create, Update, or Delete data, our cache is stale.
-  // We clear it so the user sees the latest data immediately.
   if (['POST', 'PATCH', 'DELETE'].includes(method)) {
     REQUEST_CACHE.clear()
   }
@@ -59,11 +56,10 @@ async function api(path, init = {}) {
 }
 
 // --- 🚀 NEW: PREFETCHING UTILITY ---
-// Call this on hover (onMouseEnter) to load data before the user clicks!
 export const prefetch = (path) => {
   const url = `${BASE}${path}`
   if (!REQUEST_CACHE.has(url)) {
-    api(path, { method: 'GET' }).catch(() => {}) // Ignore errors for prefetch
+    api(path, { method: 'GET' }).catch(() => {})
   }
 }
 
@@ -82,6 +78,11 @@ export const getUserByEmail = (email) =>
   api(`/users/by-email/${encodeURIComponent(email)}`)
 
 // --- BUSINESS ---
+
+// ✅ NEW: Add this function to handle Directory Caching properly
+export const getDirectoryView = () => 
+  api('/business/directory-view')
+
 export const createBusiness = (payload) =>
   api('/business/', { method: 'POST', body: JSON.stringify(payload) })
 
@@ -142,16 +143,13 @@ export const uploadMediaFile = async (businessId, mediaType, file) => {
   const res = await fetch(`${BASE}/media/upload`, {
     method: 'POST',
     body: data
-    // Note: No JSON headers here, browser sets boundary for FormData
   })
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`HTTP ${res.status}: ${text}`)
   }
   
-  // ✅ Invalidate cache because we added a file
   REQUEST_CACHE.clear()
-  
   return res.json()
 }
 

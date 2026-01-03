@@ -1,25 +1,25 @@
 import React, { useEffect, useState } from "react"
-// ✅ Import getFromCache
-import { API_BASE, getFromCache } from "../../api/client"
+// ✅ Import the new helper and getFromCache
+import { API_BASE, getDirectoryView, getFromCache } from "../../api/client"
 import "../../styles/directory.css"
 
 export default function Directory() {
   // 🚀 INSTANT LOAD: Initialize state from cache
   const [businesses, setBusinesses] = useState(() => {
-    // Check if we have the data in memory
+    // Check if we have the data in memory via the helper's endpoint
     const cached = getFromCache('/business/directory-view')
     
-    // If cache exists, we must format it immediately so the UI renders perfectly
+    // If cache exists, format immediately so the UI renders instantly
     if (Array.isArray(cached)) {
       return cached.map((biz) => ({
         ...biz,
-        hours: biz.operational_info, // Map operational_info -> hours
+        hours: biz.operational_info,
       }))
     }
     return []
   })
 
-  // Only show loading spinner if we strictly have NO data
+  // 🚀 SMART LOADING: Only show spinner if we strictly have NO data
   const [loading, setLoading] = useState(() => businesses.length === 0)
 
   // 🚀 REVALIDATE: Fetch fresh data in background
@@ -32,19 +32,13 @@ export default function Directory() {
     if (businesses.length === 0) setLoading(true)
     
     try {
-      // ✅ SYSTEM DESIGN OPTIMIZATION: Aggregated Fetch
-      const res = await fetch(`${API_BASE}/business/directory-view`)
-      
-      if (!res.ok) {
-        throw new Error(`Directory fetch failed: ${res.statusText}`)
-      }
-
-      const data = await res.json()
+      // ✅ Use the Client Helper (This checks & writes to Cache automatically)
+      const data = await getDirectoryView()
 
       // Map Backend -> UI structure
       const formattedData = data.map((biz) => ({
         ...biz,
-        hours: biz.operational_info, // Map operational_info -> hours
+        hours: biz.operational_info,
       }))
 
       setBusinesses(formattedData)
