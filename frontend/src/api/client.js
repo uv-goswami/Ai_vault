@@ -1,23 +1,32 @@
 export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
-
-// 2. BACKWARD COMPATIBILITY: Export 'BASE' pointing to the same thing.
-// This ensures that if any other file imports { BASE }, it still works.
 export const BASE = API_BASE
 
+// --- 🚀 SYSTEM DESIGN: CLIENT-SIDE CACHE ---
+// Stores API responses in memory.
+// Key = URL, Value = JSON Data
+const REQUEST_CACHE = new Map()
 
-async function api(path, init) {
-
+async function api(path, init = {}) {
   const url = `${BASE}${path}`
-  
+  const method = init.method || 'GET'
+
+  // 1. CACHE HIT: If we have the data, return it INSTANTLY (0ms latency)
+  // We only cache GET requests.
+  if (method === 'GET' && REQUEST_CACHE.has(url)) {
+    return REQUEST_CACHE.get(url)
+  }
+
+  // 2. NETWORK REQUEST
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     ...init
   })
-  
+
+  // 3. ERROR HANDLING
   if (!res.ok) {
     const text = await res.text()
-    
 
+    // Special handling for 404 on operational info (return null instead of throwing)
     if (res.status === 404 && path.includes('operational-info')) {
         return null;
     }
@@ -25,8 +34,31 @@ async function api(path, init) {
     console.error(`API Error: ${res.status}`, text)
     throw new Error(`HTTP ${res.status}: ${text}`)
   }
-  
-  return res.json()
+
+  const data = await res.json()
+
+  // 4. CACHE SET: Store the result for next time
+  if (method === 'GET') {
+    REQUEST_CACHE.set(url, data)
+  }
+
+  // 5. CACHE INVALIDATION: Write-Through Logic
+  // If we Create, Update, or Delete data, our cache is stale.
+  // We clear it so the user sees the latest data immediately.
+  if (['POST', 'PATCH', 'DELETE'].includes(method)) {
+    REQUEST_CACHE.clear()
+  }
+
+  return data
+}
+
+// --- 🚀 NEW: PREFETCHING UTILITY ---
+// Call this on hover (onMouseEnter) to load data before the user clicks!
+export const prefetch = (path) => {
+  const url = `${BASE}${path}`
+  if (!REQUEST_CACHE.has(url)) {
+    api(path, { method: 'GET' }).catch(() => {}) // Ignore errors for prefetch
+  }
 }
 
 // --- AUTH ---
@@ -41,11 +73,9 @@ export const createUser = (payload) =>
   api('/users/', { method: 'POST', body: JSON.stringify(payload) })
 
 export const getUserByEmail = (email) =>
-  api(`/users/by-email/${encodeURIComponent(email)}`) 
+  api(`/users/by-email/${encodeURIComponent(email)}`)
 
 // --- BUSINESS ---
-
-
 export const createBusiness = (payload) =>
   api('/business/', { method: 'POST', body: JSON.stringify(payload) })
 
@@ -53,13 +83,13 @@ export const listBusinesses = (limit = 10, offset = 0) =>
   api(`/business/?limit=${limit}&offset=${offset}`)
 
 export const getBusiness = (businessId) =>
-  api(`/business/${businessId}`) 
+  api(`/business/${businessId}`)
 
 export const getBusinessByOwner = (ownerId) =>
-  api(`/business/by-owner/${ownerId}`) 
+  api(`/business/by-owner/${ownerId}`)
 
 export const updateBusiness = (businessId, payload) =>
-  api(`/business/${businessId}`, { 
+  api(`/business/${businessId}`, {
     method: 'PATCH',
     body: JSON.stringify(payload)
   })
@@ -69,32 +99,32 @@ export const createService = (payload) =>
   api('/services/', { method: 'POST', body: JSON.stringify(payload) })
 
 export const getService = (serviceId) =>
-  api(`/services/${serviceId}`) 
+  api(`/services/${serviceId}`)
 
 export const listServices = (businessId, limit = 10, offset = 0) =>
   api(`/services/?business_id=${businessId}&limit=${limit}&offset=${offset}`)
 
 export const updateService = (serviceId, payload) =>
-  api(`/services/${serviceId}`, { method: 'PATCH', body: JSON.stringify(payload) }) 
+  api(`/services/${serviceId}`, { method: 'PATCH', body: JSON.stringify(payload) })
 
 export const deleteService = (serviceId) =>
-  api(`/services/${serviceId}`, { method: 'DELETE' }) 
+  api(`/services/${serviceId}`, { method: 'DELETE' })
 
 // --- OPERATIONAL INFO ---
 export const createOperationalInfo = (payload) =>
   api('/operational-info/', { method: 'POST', body: JSON.stringify(payload) })
 
 export const getOperationalInfoByBusiness = (businessId) =>
-  api(`/operational-info/by-business/${businessId}`) 
+  api(`/operational-info/by-business/${businessId}`)
 
 export const updateOperationalInfoByBusiness = (businessId, payload) =>
-  api(`/operational-info/by-business/${businessId}`, { 
+  api(`/operational-info/by-business/${businessId}`, {
     method: 'PATCH',
     body: JSON.stringify(payload)
   })
 
 export const deleteOperationalInfoByBusiness = (businessId) =>
-  api(`/operational-info/by-business/${businessId}`, { method: 'DELETE' }) 
+  api(`/operational-info/by-business/${businessId}`, { method: 'DELETE' })
 
 // --- MEDIA ---
 export const uploadMediaFile = async (businessId, mediaType, file) => {
@@ -103,8 +133,7 @@ export const uploadMediaFile = async (businessId, mediaType, file) => {
   data.append('media_type', mediaType)
   data.append('file', file)
 
-
-  const res = await fetch(`${BASE}/media/upload`, { 
+  const res = await fetch(`${BASE}/media/upload`, {
     method: 'POST',
     body: data
     // Note: No JSON headers here, browser sets boundary for FormData
@@ -113,11 +142,15 @@ export const uploadMediaFile = async (businessId, mediaType, file) => {
     const text = await res.text()
     throw new Error(`HTTP ${res.status}: ${text}`)
   }
+  
+  // ✅ Invalidate cache because we added a file
+  REQUEST_CACHE.clear()
+  
   return res.json()
 }
 
 export const getMedia = (mediaId) =>
-  api(`/media/${mediaId}`) 
+  api(`/media/${mediaId}`)
 
 export const listMedia = (businessId, limit = 10, offset = 0) =>
   api(`/media/?business_id=${businessId}&limit=${limit}&offset=${offset}`)
@@ -130,7 +163,7 @@ export const createCoupon = (payload) =>
   api('/coupons/', { method: 'POST', body: JSON.stringify(payload) })
 
 export const getCoupon = (couponId) =>
-  api(`/coupons/${couponId}`) 
+  api(`/coupons/${couponId}`)
 
 export const listCoupons = (businessId, limit = 10, offset = 0) =>
   api(`/coupons/?business_id=${businessId}&limit=${limit}&offset=${offset}`)
@@ -140,7 +173,7 @@ export const createAiMetadata = (payload) =>
   api('/ai-metadata/', { method: 'POST', body: JSON.stringify(payload) })
 
 export const getAiMetadata = (metadataId) =>
-  api(`/ai-metadata/${metadataId}`) 
+  api(`/ai-metadata/${metadataId}`)
 
 export const listAiMetadata = (businessId, limit = 10, offset = 0) =>
   api(`/ai-metadata/?business_id=${businessId}&limit=${limit}&offset=${offset}`)
@@ -156,4 +189,4 @@ export const listJsonLD = (businessId) =>
   api(`/jsonld/?business_id=${businessId}`)
 
 export const getJsonLD = (feedId) =>
-  api(`/jsonld/${feedId}`) 
+  api(`/jsonld/${feedId}`)
