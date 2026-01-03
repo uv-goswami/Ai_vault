@@ -29,7 +29,7 @@ def ensure_string(value):
     return str(value) if value is not None else ""
 
 # -------------------------
-# STANDARD CRUD
+# STANDARD CRUD (Keep unchanged)
 # -------------------------
 @router.post("/check", response_model=VisibilityCheckRequestOut)
 def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depends(get_db)):
@@ -134,11 +134,11 @@ def get_suggestion(suggestion_id: UUID, db: Session = Depends(get_db)):
     return suggestion
 
 # -------------------------
-# ✅ AI-POWERED RUN ENDPOINT
+# ✅ STRICT VISIBILITY CHECKER
 # -------------------------
 @router.post("/run", response_model=VisibilityCheckResultOut)
 def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)):
-    # 1. Fetch ALL Data
+    # 1. Fetch Data
     business = db.query(models.BusinessProfile).filter_by(business_id=business_id).first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
@@ -146,12 +146,9 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     services = db.query(models.Service).filter_by(business_id=business_id).all()
     media_count = db.query(models.MediaAsset).filter_by(business_id=business_id).count()
     op_info = db.query(models.OperationalInfo).filter_by(business_id=business_id).first()
-    
-    # Check if JSON-LD exists (Crucial for Bot Visibility)
     jsonld_exists = db.query(models.JsonLDFeed).filter_by(business_id=business_id).count() > 0
 
     # 2. Log request
-    # ✅ FIX: changed "ai_audit" to "visibility" to match your DB Enum
     check = models.VisibilityCheckRequest(
         business_id=business_id,
         check_type="visibility", 
@@ -161,63 +158,69 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     db.add(check)
     db.commit()
 
-    # 3. Construct AI Prompt with WHOLE Data
+    # 3. Construct HARSH Prompt
     services_str = ", ".join([s.name for s in services]) if services else "None"
     
     prompt = f"""
-    Act as an AIO (Artificial Intelligence Optimization) and SEO Expert.
-    Analyze this business profile to determine how visible it is to 1) AI Agents/Bots and 2) Humans.
-
+    Act as a Strict SEO Auditor. You are grading this business for visibility to AI Bots and Humans.
+    BE HARSH. Do not give participation points.
+    
     DATA:
     - Name: {business.name}
     - Description: {business.description or "Missing"}
     - Slogan: {business.quote_slogan or "Missing"}
-    - Services Listed: {len(services)} ({services_str})
-    - Media Assets: {media_count}
-    - Operational Info (Hours/Wifi): {'Present' if op_info else 'Missing'}
-    - JSON-LD Schema: {'Present (Good for Bots)' if jsonld_exists else 'MISSING (Critical Failure for Bots)'}
+    - Service Count: {len(services)} ({services_str})
+    - Images: {media_count}
+    - Hours Listed: {'Yes' if op_info else 'No'}
+    - JSON-LD Schema: {'Yes' if jsonld_exists else 'NO'}
 
-    Return a valid JSON object with:
-    1. "score": A number 0-100 (Overall health).
-    2. "bot_analysis": A short string summarizing if bots can read this (mention JSON-LD).
-    3. "human_analysis": A short string summarizing human appeal (media, clarity).
-    4. "issues": A list of specific strings describing what is missing (e.g. "Missing JSON-LD", "No Services").
-    5. "recommendations": A list of specific strings on how to fix it (e.g. "Generate JSON-LD in the Dashboard", "Add at least 3 services").
+    SCORING RULES:
+    - Start at 0.
+    - JSON-LD Missing? MAX SCORE = 40. (Automatic Fail for Bots).
+    - No Images? Deduct 20 points.
+    - Description too short (<50 chars)? Deduct 15 points.
+    - No Services? Deduct 20 points.
+    - Max score 100 is only for PERFECT profiles.
+
+    Return valid raw JSON (no markdown) with:
+    1. "score": Number (0-100).
+    2. "bot_analysis": String (Focus on JSON-LD).
+    3. "human_analysis": String (Focus on trust/visuals).
+    4. "issues": List of strings (The specific failures).
+    5. "recommendations": List of strings (Actionable fixes).
     """
 
     try:
-        # Using gemini-1.5-flash (Standard Free Tier)
+        # ✅ Using 'gemini-1.5-flash' (Most reliable for free tier)
+        # If this fails, the 'except' block will handle it strictly now.
         model = genai.GenerativeModel('gemini-1.5-flash')
+        
         response = model.generate_content(prompt)
         
-        # Clean response
+        # Robust Parsing
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
+        
+        # If response is empty or broken, raise error to hit the fallback
+        if not clean_text:
+            raise ValueError("Empty AI response")
+
         ai_data = json.loads(clean_text)
 
-        # Parse AI Data
-        score = float(ai_data.get("score", 50))
+        score = float(ai_data.get("score", 40)) # Default to 40 if AI forgets score
+        bot_txt = ai_data.get("bot_analysis", "Unknown")
+        human_txt = ai_data.get("human_analysis", "Unknown")
+        issues_str = ensure_string(ai_data.get("issues", []))
+        recs_str = ensure_string(ai_data.get("recommendations", []))
         
-        # Combine analyses for the text fields
-        bot_txt = ai_data.get("bot_analysis", "")
-        human_txt = ai_data.get("human_analysis", "")
-        
-        issues_list = ai_data.get("issues", [])
-        recs_list = ai_data.get("recommendations", [])
+        full_recommendations = f"[BOTS]: {bot_txt} || [HUMANS]: {human_txt} || ACTIONS: {recs_str}"
 
-        # Format for DB (String storage)
-        issues_str = ensure_string(issues_list)
-        
-        # Prepend the Bot/Human analysis to recommendations so user sees it
-        full_recommendations = f"[BOTS]: {bot_txt} || [HUMANS]: {human_txt} || ACTIONS: {ensure_string(recs_list)}"
-
-        # 4. Save Result
         result = models.VisibilityCheckResult(
             request_id=check.request_id,
             business_id=business_id,
             visibility_score=score,
             issues_found=issues_str,
             recommendations=full_recommendations, 
-            output_snapshot=clean_text[:500], # Store partial raw JSON for debug
+            output_snapshot=clean_text[:500],
             completed_at=datetime.utcnow()
         )
 
@@ -227,18 +230,47 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
         return result
 
     except Exception as e:
-        print(f"AI Check Error: {e}")
-        # Fallback to simple logic if AI fails
-        fallback_score = 30.0
-        if jsonld_exists: fallback_score += 30
-        if len(services) > 0: fallback_score += 20
+        print(f"❌ AI VISIBILITY CHECK FAILED: {str(e)}")
         
+        # ✅ STRICT FALLBACK SCORING
+        # If AI fails, we grade manually but strictly.
+        
+        strict_score = 0
+        issues = ["AI Service Unreachable"]
+        recs = ["Retry audit later"]
+
+        # Manual strict logic
+        if jsonld_exists: 
+            strict_score += 30
+        else:
+            issues.append("CRITICAL: Missing JSON-LD")
+            recs.append("Generate JSON-LD immediately")
+
+        if len(services) >= 3:
+            strict_score += 20
+        elif len(services) == 0:
+            issues.append("No services listed")
+            recs.append("Add at least 3 services")
+        
+        if media_count >= 3:
+            strict_score += 20
+        else:
+            issues.append("Not enough images")
+        
+        if business.description and len(business.description) > 50:
+            strict_score += 10
+        else:
+            issues.append("Description too short or missing")
+
+        # Cap fallback score at 50 if AI failed
+        final_score = min(strict_score, 50)
+
         result = models.VisibilityCheckResult(
             request_id=check.request_id,
             business_id=business_id,
-            visibility_score=fallback_score,
-            issues_found="AI Check Failed, switched to basic mode.",
-            recommendations="Ensure JSON-LD and Services are present.",
+            visibility_score=final_score,
+            issues_found="; ".join(issues),
+            recommendations="; ".join(recs),
             completed_at=datetime.utcnow()
         )
         db.add(result)
