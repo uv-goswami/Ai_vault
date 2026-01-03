@@ -1,39 +1,58 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
-// 1. Import API functions (They already use API_BASE internally now)
-import { getBusiness, updateBusiness } from '../../api/client'
+// ✅ Import getFromCache
+import { getBusiness, updateBusiness, getFromCache } from '../../api/client'
 import '../../styles/dashboard.css'
 
 export default function Profile() {
   const { id } = useParams()
-  const [business, setBusiness] = useState(null)
-  const [form, setForm] = useState(null)
+
+  // 🚀 INSTANT LOAD: Initialize state from cache
+  const cachedBusiness = getFromCache(`/business/${id}`)
+  
+  const [business, setBusiness] = useState(cachedBusiness || null)
+  
+  // If we have cached business, we prepare the form immediately
+  const [form, setForm] = useState(cachedBusiness ? toEditable(cachedBusiness) : null)
+  
   const [editing, setEditing] = useState(false)
-  const [loading, setLoading] = useState(true)
+  
+  // If we have data, we are NOT loading (visually). Background fetch happens anyway.
+  const [loading, setLoading] = useState(!cachedBusiness)
+  
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // 🚀 REVALIDATE: Fetch fresh data in background
   useEffect(() => {
     loadBusiness()
   }, [id])
 
   async function loadBusiness() {
-    setLoading(true)
+    // Only show loading spinner if we strictly have NO data
+    if (!business) setLoading(true)
     setError('')
+    
     try {
-      // This uses the client.js function, which now points to the live server
       const data = await getBusiness(id)
       setBusiness(data)
-      setForm(toEditable(data))
+      
+      // ✅ Only update form if user is NOT currently editing
+      // This prevents overwriting what they are typing if the background refresh finishes
+      if (!editing) {
+        setForm(toEditable(data))
+      }
     } catch (e) {
       console.error(e)
-      setError('Failed to load business profile.')
+      // Only show error if we have no data to show
+      if (!business) setError('Failed to load business profile.')
     } finally {
       setLoading(false)
     }
   }
 
+  // Helper to convert DB object to Form object
   function toEditable(b) {
     return {
       name: b?.name || '',
@@ -64,6 +83,7 @@ export default function Profile() {
         latitude: form.latitude === '' ? null : Number(form.latitude),
         longitude: form.longitude === '' ? null : Number(form.longitude)
       }
+      
       const updated = await updateBusiness(id, payload)
       setBusiness(updated)
       setForm(toEditable(updated))

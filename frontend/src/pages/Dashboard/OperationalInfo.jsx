@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
+// ✅ Import getFromCache
 import {
   getOperationalInfoByBusiness,
   createOperationalInfo,
   updateOperationalInfoByBusiness,
-  deleteOperationalInfoByBusiness
+  deleteOperationalInfoByBusiness,
+  getFromCache
 } from '../../api/client'
 import '../../styles/dashboard.css'
 
 export default function OperationalInfo() {
   const { id } = useParams()
-  const [info, setInfo] = useState(null)
+  
+  // 🚀 INSTANT LOAD: Initialize state from cache
+  const [info, setInfo] = useState(() => {
+    return getFromCache(`/operational-info/by-business/${id}`) || null
+  })
+
   const [form, setForm] = useState({
     opening_hours: '',
     closing_hours: '',
@@ -26,6 +33,7 @@ export default function OperationalInfo() {
   const [editing, setEditing] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
+  // 🚀 REVALIDATE: Fetch fresh data in background
   useEffect(() => {
     loadInfo()
   }, [id])
@@ -47,7 +55,9 @@ export default function OperationalInfo() {
         special_notes: data.special_notes || ''
       })
     } catch {
-      setInfo(null)
+      // Don't nullify info on error if we have cached data, 
+      // but here we stick to original logic (or you could refine error handling)
+      if (!info) setInfo(null)
     }
   }
 

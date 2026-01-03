@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
-// 1. Import API_BASE alongside the other functions
-import { listMedia, uploadMediaFile, deleteMedia, API_BASE } from '../../api/client'
+// ✅ Import getFromCache
+import { listMedia, uploadMediaFile, deleteMedia, API_BASE, getFromCache } from '../../api/client'
 import '../../styles/dashboard.css'
 
 export default function Media() {
   const { id } = useParams()
-  const [media, setMedia] = useState([])
+  
+  // 🚀 INSTANT LOAD: Initialize state from cache
+  const [media, setMedia] = useState(() => {
+    const cached = getFromCache(`/media/?business_id=${id}&limit=100&offset=0`)
+    return Array.isArray(cached) ? cached : []
+  })
+
   const [form, setForm] = useState({ media_type: null, file: null })
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState(null)
 
+  // 🚀 REVALIDATE: Fetch fresh data in background
   useEffect(() => {
     loadMedia()
   }, [id])

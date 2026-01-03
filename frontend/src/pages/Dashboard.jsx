@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
-import { getBusiness, listServices, listMedia } from '../api/client'
+// ✅ Import getFromCache
+import { getBusiness, listServices, listMedia, getFromCache } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import SidebarNav from '../components/SidebarNav'
 import StatCard from '../components/StatCard'
@@ -11,10 +12,21 @@ import '../styles/dashboard.css'
 export default function Dashboard() {
   const { id } = useParams()
   const { userId } = useAuth()
-  const [business, setBusiness] = useState(null)
-  const [services, setServices] = useState([])
-  const [media, setMedia] = useState([])
 
+  // 🚀 INSTANT LOAD: Synchronous Cache Reading
+  const [business, setBusiness] = useState(() => {
+    return getFromCache(`/business/${id}`) || null
+  })
+
+  const [services, setServices] = useState(() => {
+    return getFromCache(`/services/?business_id=${id}&limit=100&offset=0`) || []
+  })
+
+  const [media, setMedia] = useState(() => {
+    return getFromCache(`/media/?business_id=${id}&limit=100&offset=0`) || []
+  })
+
+  // 🚀 BACKGROUND UPDATE
   useEffect(() => {
     if (userId) {
       getBusiness(id).then(setBusiness).catch(() => {})

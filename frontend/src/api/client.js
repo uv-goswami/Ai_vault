@@ -6,6 +6,12 @@ export const BASE = API_BASE
 // Key = URL, Value = JSON Data
 const REQUEST_CACHE = new Map()
 
+// ✅ NEW: Helper to read cache synchronously (Essential for SWR Pattern)
+export function getFromCache(path) {
+  const url = `${BASE}${path}`
+  return REQUEST_CACHE.get(url) || null
+}
+
 async function api(path, init = {}) {
   const url = `${BASE}${path}`
   const method = init.method || 'GET'
