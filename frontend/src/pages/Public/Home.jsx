@@ -1,6 +1,8 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import '../../styles/home.css'
+// ✅ Import prefetch utility
+import { prefetch } from '../../api/client'
 
 export default function Home() {
   return (
@@ -15,7 +17,17 @@ export default function Home() {
           </p>
           <div className="hero-actions">
             <Link to="/register" className="btn primary">Get started</Link>
-            <Link to="/directory" className="btn secondary">Browse directory</Link>
+            
+            {/* 🚀 SYSTEM DESIGN: Prefetch Data on Hover */}
+            {/* When user hovers here, we silently fetch the directory data. */}
+            {/* When they click, the page loads instantly (0ms). */}
+            <Link 
+              to="/directory" 
+              className="btn secondary"
+              onMouseEnter={() => prefetch('/business/directory-view')}
+            >
+              Browse directory
+            </Link>
           </div>
         </div>
       </header>
