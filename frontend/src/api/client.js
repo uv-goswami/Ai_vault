@@ -172,6 +172,9 @@ export const listAiMetadata = (businessId, limit = 10, offset = 0) =>
 export const generateAiMetadata = (businessId) =>
   api(`/ai-metadata/generate?business_id=${businessId}`, { method: 'POST' })
 
+export const deleteAiMetadata = (metadataId) =>
+  api(`/ai-metadata/${metadataId}`, { method: 'DELETE' })
+
 // --- JSON-LD ---
 export const generateJsonLD = (businessId) =>
   api(`/jsonld/generate?business_id=${businessId}`, { method: 'POST' })
@@ -181,3 +184,16 @@ export const listJsonLD = (businessId) =>
 
 export const getJsonLD = (feedId) =>
   api(`/jsonld/${feedId}`)
+
+export const deleteJsonLD = (feedId) =>
+  api(`/jsonld/${feedId}`, { method: 'DELETE' })
+
+// --- VISIBILITY ---
+export const runVisibilityCheck = (businessId) =>
+  api(`/visibility/run?business_id=${businessId}`, { method: 'POST' })
+
+export const listVisibilityResults = (businessId, limit = 20, offset = 0) =>
+  api(`/visibility/result?business_id=${businessId}&limit=${limit}&offset=${offset}`)
+
+export const listVisibilitySuggestions = (businessId, limit = 20, offset = 0) =>
+  api(`/visibility/suggestion?business_id=${businessId}&limit=${limit}&offset=${offset}`)
