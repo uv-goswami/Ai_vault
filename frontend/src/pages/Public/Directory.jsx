@@ -73,42 +73,20 @@ export default function Directory() {
               itemScope
               itemType="https://schema.org/LocalBusiness"
             >
-              {/* Image Section - Logic Updated */}
+              {/* Image Section - Only renders if media exists */}
               {biz.media && biz.media.length > 0 ? (
                 <img
                   src={getImageUrl(biz.media[0].url)}
                   alt={biz.name}
                   className="directory-img"
-                  style={{ objectFit: 'cover', width: '100%', height: '180px' }}
                   onError={(e) => {
+                    // If image fails to load, simply hide this element
                     e.target.style.display = 'none'
-                    // Find the sibling placeholder and show it
-                    e.target.nextSibling.style.display = 'flex'
                   }}
                 />
               ) : null}
               
-              {/* ✅ NEW: Professional Neutral Placeholder (Building Icon) */}
-              <div 
-                className="directory-img placeholder" 
-                style={{ 
-                  display: biz.media && biz.media.length > 0 ? 'none' : 'flex',
-                  backgroundColor: '#f8f9fa', // Very light grey
-                  color: '#b0b3b8',           // Muted icon color
-                  height: '180px',
-                  width: '100%',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderBottom: '1px solid #eee'
-                }}
-              >
-                {/* Simple SVG Building Icon */}
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 21h18" />
-                  <path d="M5 21V7l8-4 8 4v14" />
-                  <path d="M9 10a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
-                </svg>
-              </div>
+              {/* NO Placeholder Div here anymore. If no image, header sits at the top. */}
 
               {/* Header */}
               <header className="card-header">
