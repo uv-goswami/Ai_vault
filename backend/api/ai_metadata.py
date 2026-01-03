@@ -89,7 +89,7 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
     try:
         # ✅ FIX: Use 'gemini-1.5-flash'
         # This is the standard free model. Do NOT use 'lite' or '2.0' as they hit limits instantly.
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         response = model.generate_content(prompt)
         
