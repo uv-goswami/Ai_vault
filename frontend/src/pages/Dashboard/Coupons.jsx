@@ -2,15 +2,21 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import SidebarNav from '../../components/SidebarNav'
 import '../../styles/dashboard.css'
-// ✅ Import API_BASE and getFromCache
-import { API_BASE, getFromCache } from '../../api/client'
+// ✅ Import helpers from client.js
+import { 
+  API_BASE, 
+  getFromCache, 
+  listCoupons, 
+  createCoupon 
+} from '../../api/client'
 
 export default function Coupons() {
   const { id } = useParams()
   
-  // 🚀 INSTANT LOAD: Initialize from cache
+  // 🚀 INSTANT LOAD: Initialize state from cache
   const [coupons, setCoupons] = useState(() => {
-    const cached = getFromCache(`/coupons?business_id=${id}&limit=20&offset=0`)
+    // Exact match for the URL used in listCoupons
+    const cached = getFromCache(`/coupons/?business_id=${id}&limit=20&offset=0`)
     return Array.isArray(cached) ? cached : []
   })
   
@@ -34,8 +40,8 @@ export default function Coupons() {
 
   async function loadCoupons() {
     try {
-      const res = await fetch(`${API_BASE}/coupons?business_id=${id}&limit=20&offset=0`)
-      const data = await res.json()
+      // Use client helper to populate cache
+      const data = await listCoupons(id, 20, 0)
       setCoupons(data)
     } catch (err) {
       console.error(err)
@@ -60,20 +66,12 @@ export default function Coupons() {
     }
   }
 
-  async function createCoupon() {
+  async function handleCreate() {
     try {
       const payload = getCleanPayload(form)
-      const res = await fetch(`${API_BASE}/coupons`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: id, ...payload })
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json()
-        alert(`Error: ${JSON.stringify(errorData.detail)}`)
-        return
-      }
+      
+      // Use client helper (Handles POST + Cache Invalidation)
+      await createCoupon({ business_id: id, ...payload })
 
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
       setShowForm(false)
@@ -84,11 +82,12 @@ export default function Coupons() {
     }
   }
 
-  async function updateCoupon(couponId) {
+  async function handleUpdate(couponId) {
     try {
       const payload = getCleanPayload(form)
       const fullPayload = { business_id: id, ...payload }
 
+      // Raw fetch (since updateCoupon helper doesn't exist yet)
       const res = await fetch(`${API_BASE}/coupons/${couponId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -97,24 +96,28 @@ export default function Coupons() {
 
       if (!res.ok) {
         const errorData = await res.json()
-        console.error("Update failed:", errorData)
         alert(`Update failed: ${JSON.stringify(errorData.detail)}`) 
         return
       }
 
       setEditing(null)
       setForm({ code: '', description: '', discount_value: '', valid_from: '', valid_until: '', terms_conditions: '' })
-      loadCoupons()
+      
+      // Optimistic/Manual Reload since raw fetch doesn't clear cache automatically
+      loadCoupons() 
     } catch (err) {
       console.error(err)
       alert("Network error occurred")
     }
   }
 
-  async function deleteCoupon(couponId) {
+  async function handleDelete(couponId) {
     try {
+      // Raw fetch
       await fetch(`${API_BASE}/coupons/${couponId}`, { method: 'DELETE' })
-      loadCoupons()
+      
+      // Optimistic Update: Remove from UI immediately
+      setCoupons(prev => prev.filter(c => c.coupon_id !== couponId))
     } catch (err) {
       console.error(err)
     }
@@ -149,7 +152,7 @@ export default function Coupons() {
                     <textarea value={form.terms_conditions} onChange={e => setForm({ ...form, terms_conditions: e.target.value })} placeholder="Terms & Conditions" />
                     
                     <div style={{marginTop: '10px'}}>
-                        <button onClick={() => updateCoupon(c.coupon_id)}>Save</button>
+                        <button onClick={() => handleUpdate(c.coupon_id)}>Save</button>
                         <button className="ghost" onClick={() => setEditing(null)}>Cancel</button>
                     </div>
                   </>
@@ -158,6 +161,7 @@ export default function Coupons() {
                     <strong>{c.code}</strong>
                     <p>{c.description}</p>
                     <p>Discount: {c.discount_value}</p>
+                    
                     <p>Valid: {formatDateForInput(c.valid_from)} → {formatDateForInput(c.valid_until)}</p>
                     <p>{c.terms_conditions}</p>
                     
@@ -172,7 +176,7 @@ export default function Coupons() {
                         terms_conditions: c.terms_conditions || ''
                       })
                     }}>Edit</button>
-                    <button className="ghost" onClick={() => deleteCoupon(c.coupon_id)}>Delete</button>
+                    <button className="ghost" onClick={() => handleDelete(c.coupon_id)}>Delete</button>
                   </>
                 )}
               </div>
@@ -199,7 +203,7 @@ export default function Coupons() {
               <textarea placeholder="Terms & Conditions" value={form.terms_conditions} onChange={e => setForm({ ...form, terms_conditions: e.target.value })} />
               
               <div style={{marginTop: '10px'}}>
-                  <button onClick={createCoupon}>Add Coupon</button>
+                  <button onClick={handleCreate}>Add Coupon</button>
                   <button className="ghost" onClick={() => setShowForm(false)}>Cancel</button>
               </div>
             </div>
