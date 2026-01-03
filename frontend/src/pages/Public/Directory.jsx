@@ -53,6 +53,16 @@ export default function Directory() {
     return `${API_BASE}${url}`
   }
 
+  // Helper to generate a consistent color based on the business name
+  const getPlaceholderColor = (name) => {
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#FFD93D', '#6C5B7B'];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  }
+
   return (
     <div className="directory-page container">
       <h1 className="directory-title">Business Directory</h1>
@@ -73,28 +83,37 @@ export default function Directory() {
               itemScope
               itemType="https://schema.org/LocalBusiness"
             >
-              {/* Image Section */}
-              {biz.media && biz.media.length > 0 ? (
-                <img
-                  src={getImageUrl(biz.media[0].url)}
-                  alt={biz.name}
-                  className="directory-img"
-                  onError={(e) => {
-                    e.target.style.display = 'none'
-                    e.target.nextSibling.style.display = 'flex'
+              {/* Image Section with Fallback */}
+              <div className="card-image-container" style={{ height: '160px', overflow: 'hidden', position: 'relative', backgroundColor: '#f3f4f6' }}>
+                {biz.media && biz.media.length > 0 ? (
+                  <img
+                    src={getImageUrl(biz.media[0].url)}
+                    alt={biz.name}
+                    className="directory-img"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      // If image fails to load, hide image and show placeholder
+                      e.target.style.opacity = '0';
+                      e.target.nextSibling.style.opacity = '1';
+                    }}
+                  />
+                ) : null}
+                
+                {/* Colorful Placeholder with Initial */}
+                <div 
+                  className="directory-img placeholder" 
+                  style={{ 
+                    position: 'absolute',
+                    top: 0, left: 0, width: '100%', height: '100%',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    backgroundColor: getPlaceholderColor(biz.name), 
+                    color: 'white', fontSize: '3rem', fontWeight: 'bold',
+                    opacity: (biz.media && biz.media.length > 0) ? '0' : '1', // Hide if image exists
+                    transition: 'opacity 0.3s ease'
                   }}
-                />
-              ) : null}
-              
-              {/* Fallback Placeholder (Only shows if no image exists) */}
-              <div 
-                className="directory-img placeholder" 
-                style={{ 
-                  display: biz.media && biz.media.length > 0 ? 'none' : 'flex',
-                  backgroundColor: '#f3f4f6', color: '#888'
-                }}
-              >
-                {biz.name.charAt(0)}
+                >
+                  {biz.name.charAt(0).toUpperCase()}
+                </div>
               </div>
 
               {/* Header */}
