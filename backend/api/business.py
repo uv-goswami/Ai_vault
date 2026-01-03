@@ -6,27 +6,43 @@ from db import models
 from schemas.business import BusinessCreate, BusinessOut, BusinessUpdate, BusinessDirectoryView
 from uuid import UUID
 from typing import List
-from datetime import datetime
+from datetime import datetime, timedelta, timezone  # ✅ Added timezone and timedelta
 
 router = APIRouter(prefix="/business", tags=["Business"])
 
-# ✅ NEW: Aggregated Endpoint for Directory (Solves N+1 Problem)
+# --- 🚀 SYSTEM DESIGN: IN-MEMORY CACHE ---
+# Stores the directory result to avoid hitting the DB on every request.
+DIRECTORY_CACHE = {
+    "data": None,
+    "expires_at": datetime.now(timezone.utc)
+}
+CACHE_TTL_SECONDS = 300  # 5 Minutes
+
+# ✅ Aggregated Endpoint with Caching
 @router.get("/directory-view", response_model=List[BusinessDirectoryView])
 def get_directory_aggregated(db: Session = Depends(get_db)):
-    # 1. Get all businesses
+    global DIRECTORY_CACHE
+    now = datetime.now(timezone.utc)
+    
+    # 1. Cache Hit Check (The "Fast Path")
+    # If we have data and it hasn't expired, return it instantly (0ms DB latency)
+    if DIRECTORY_CACHE["data"] and now < DIRECTORY_CACHE["expires_at"]:
+        return DIRECTORY_CACHE["data"]
+
+    # 2. Cache Miss (The "Slow Path")
+    # If cache is empty or expired, query the database
     businesses = db.query(models.BusinessProfile).all()
     
     results = []
 
-    # 2. Server-Side Aggregation (Much faster than client-side)
+    # Server-Side Aggregation
     for biz in businesses:
-        # Fetch related data
         op_info = db.query(models.OperationalInfo).filter_by(business_id=biz.business_id).first()
         media = db.query(models.MediaAsset).filter_by(business_id=biz.business_id).limit(1).all() # Just 1 for thumbnail
         services = db.query(models.Service).filter_by(business_id=biz.business_id).all()
         coupons = db.query(models.Coupon).filter_by(business_id=biz.business_id).all()
         
-        # Attach to the object dynamically for Pydantic serialization
+        # Attach to the object dynamically
         biz.operational_info = op_info
         biz.media = media
         biz.services = services
@@ -34,6 +50,10 @@ def get_directory_aggregated(db: Session = Depends(get_db)):
         
         results.append(biz)
         
+    # 3. Write to Cache (Read-Through)
+    DIRECTORY_CACHE["data"] = results
+    DIRECTORY_CACHE["expires_at"] = now + timedelta(seconds=CACHE_TTL_SECONDS)
+    
     return results
 
 # Create a new business
@@ -48,6 +68,11 @@ def create_business(data: BusinessCreate, db: Session = Depends(get_db)):
     db.add(new_business)
     db.commit()
     db.refresh(new_business)
+
+    # ✅ Cache Invalidation: Clear cache so new business appears immediately
+    global DIRECTORY_CACHE
+    DIRECTORY_CACHE["data"] = None 
+
     return new_business
 
 # List all businesses (paginated)
@@ -93,7 +118,14 @@ def update_business(business_id: UUID, payload: BusinessUpdate, db: Session = De
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(business, field, value)
 
-    business.updated = datetime.utcnow()
+    # ✅ Fixed: Use timezone-aware UTC
+    business.updated = datetime.now(timezone.utc)
+    
     db.commit()
     db.refresh(business)
+
+    # ✅ Cache Invalidation: Clear cache so updates appear immediately in Directory
+    global DIRECTORY_CACHE
+    DIRECTORY_CACHE["data"] = None
+
     return business
