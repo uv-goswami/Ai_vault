@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom' // Added Link here
-import { login as loginUser, getBusinessByOwner } from '../../api/client'
+import { useNavigate, Link } from 'react-router-dom'
+import { login as loginUser } from '../../api/client' // Removed getBusinessByOwner import
 import { useAuth } from '../../context/AuthContext'
 import '../../styles/login.css'
 
 export default function Login() {
-  // We extract 'login' and 'userId' from the context
   const { userId, login } = useAuth()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({ email: '', password: '' })
@@ -14,17 +13,24 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      // 1. Authenticate the User
-      const user = await loginUser(formData.email, formData.password)
+      // 1. Authenticate (Now returns user_id AND business_id in one go)
+      const response = await loginUser(formData.email, formData.password)
       
-      // 2. Fetch the Business associated with this User
-      const business = await getBusinessByOwner(user.user_id)
-      
-      // 3. Log in with BOTH IDs so the Navbar updates immediately
-      login(user.user_id, business.business_id)
-      
-      // 4. Redirect to the Business Dashboard
-      navigate(`/dashboard/${business.business_id}`)
+      const { user_id, business_id } = response
+
+      if (!user_id) throw new Error("Login failed")
+
+      // 2. Log in with context immediately
+      login(user_id, business_id)
+
+      // 3. Redirect immediately (No second wait!)
+      if (business_id) {
+        navigate(`/dashboard/${business_id}`)
+      } else {
+        // Fallback if no business exists yet
+        navigate('/') 
+      }
+
     } catch (err) {
       console.error(err)
       setError('Login failed. Check credentials.')
@@ -38,7 +44,6 @@ export default function Login() {
         <div className="login-panel">
           <h2 className="login-title">You're already logged in</h2>
           <p className="login-sub">
-             {/* Note: We use a generic link here, or you could redirect automatically */}
              Go to your Dashboard
           </p>
         </div>
@@ -69,7 +74,6 @@ export default function Login() {
           <button type="submit" className="btn primary full-width">Login</button>
         </form>
 
-        {/* Added footer link for better navigation */}
         <p style={{ marginTop: '1rem', textAlign: 'center' }}>
           Don't have an account? <Link to="/register">Register</Link>
         </p>
