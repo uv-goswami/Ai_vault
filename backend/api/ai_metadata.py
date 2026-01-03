@@ -15,7 +15,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 router = APIRouter(prefix="/ai-metadata", tags=["AI Metadata"])
 
-# --- CREATE ---
+# --- CREATE (Manual) ---
 @router.post("/", response_model=AiMetadataOut)
 def create_metadata(data: AiMetadataCreate, db: Session = Depends(get_db)):
     business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
@@ -53,7 +53,7 @@ def get_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Metadata not found")
     return metadata
 
-# --- DELETE (Fixes your 405 error) ---
+# --- DELETE ---
 @router.delete("/{metadata_id}")
 def delete_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
     metadata = db.query(models.AiMetadata).filter_by(ai_metadata_id=metadata_id).first()
@@ -64,32 +64,66 @@ def delete_metadata(metadata_id: UUID, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Metadata deleted successfully"}
 
-# --- GENERATE (Fixes your 429/404 error) ---
+# --- GENERATE (The Smart Version) ---
 @router.post("/generate", response_model=AiMetadataOut)
 def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_db)):
+    # 1. Fetch Main Business Profile
     business = db.query(models.BusinessProfile).filter_by(business_id=business_id).first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
 
-    prompt = f"""
-    Act as an SEO Expert. Analyze this local business and generate metadata.
-    
+    # 2. Fetch Related Data (Services, Hours) safely
+    # We use try/except block or check if the relationship exists to prevent errors
+    services_list = []
+    try:
+        services_q = db.query(models.Service).filter_by(business_id=business_id).all()
+        services_list = [f"{s.name} (${s.price})" for s in services_q]
+    except Exception:
+        pass # Ignore if table doesn't exist or error
+
+    op_info_str = "Not listed"
+    try:
+        op_info = db.query(models.OperationalInfo).filter_by(business_id=business_id).first()
+        if op_info:
+            op_info_str = f"Open: {op_info.opening_hours} - {op_info.closing_hours}, Off: {op_info.off_days}"
+    except Exception:
+        pass
+
+    # 3. Construct a RICH Context Prompt
+    # We handle NULLs using `or 'N/A'` so the AI knows what's missing
+    context_text = f"""
     Business Name: {business.name}
     Type: {business.business_type}
-    Description: {business.description}
-    Address: {business.address}
+    Description: {business.description or 'No description provided.'}
+    Slogan: {business.quote_slogan or 'None'}
+    
+    Contact & Location:
+    - Address: {business.address or 'Online'} ({business.latitude}, {business.longitude})
+    - Phone: {business.phone or 'N/A'}
+    - Website: {business.website or 'N/A'}
+    
+    Offerings:
+    - Services: {", ".join(services_list) if services_list else "General services"}
+    - Operational Info: {op_info_str}
+    """
 
-    Return a valid JSON object (NO markdown, just raw JSON) with these 4 keys:
-    1. "keywords": A string of 10 comma-separated high-value SEO keywords.
-    2. "extracted_insights": A 1-sentence marketing hook about what makes this business unique.
-    3. "intent_labels": A string of 3 user intents (e.g., "Transactional, Navigational, Discovery").
-    4. "detected_entities": A string listing key entities (Locations, Products, Services) found in the text.
+    prompt = f"""
+    Act as a Senior SEO Specialist and Data Enricher. 
+    Analyze the following local business profile deeply:
+
+    {context_text}
+
+    Based ONLY on this data (do not hallucinate features not mentioned), generate a JSON object with:
+    1. "keywords": 20 very specific SEO keywords (combine location + service + slogan).
+    2. "extracted_insights": A compelling 1-sentence marketing pitch that highlights their specific slogan or unique services.
+    3. "intent_labels": 3 User Intents (e.g., "Booking", "Inquiry", "Emergency").
+    4. "detected_entities": A string list of the most important entities (City, Specific Service Names, Brands).
+
+    Return ONLY raw JSON. No markdown blocks.
     """
 
     try:
-        # ✅ FIX: Use 'gemini-1.5-flash'
-        # This is the standard free model. Do NOT use 'lite' or '2.0' as they hit limits instantly.
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash') 
         
         response = model.generate_content(prompt)
         
@@ -125,5 +159,4 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
 
     except Exception as e:
         print(f"AI Generation Error: {e}")
-        # If we still hit a rate limit, show the specific message
         raise HTTPException(status_code=500, detail=f"AI Error: {str(e)}")
