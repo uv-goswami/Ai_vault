@@ -4,12 +4,12 @@ import { API_BASE, getDirectoryView, getFromCache } from "../../api/client"
 import "../../styles/directory.css"
 
 export default function Directory() {
-  // 🚀 INSTANT LOAD: Initialize state from cache
+  // 🚀 INSTANT LOAD: Initialize state directly from cache
   const [businesses, setBusinesses] = useState(() => {
-    // Check if we have the data in memory via the helper's endpoint
+    // Check if we have data in memory
     const cached = getFromCache('/business/directory-view')
     
-    // If cache exists, format immediately so the UI renders instantly
+    // If cache exists, format it immediately so the UI renders INSTANTLY
     if (Array.isArray(cached)) {
       return cached.map((biz) => ({
         ...biz,
@@ -19,23 +19,23 @@ export default function Directory() {
     return []
   })
 
-  // 🚀 SMART LOADING: Only show spinner if we strictly have NO data
+  // 🚀 NO LOADING SPINNER: If cache exists, loading is FALSE immediately.
+  // This removes the "text loading directory" flicker.
   const [loading, setLoading] = useState(() => businesses.length === 0)
 
-  // 🚀 REVALIDATE: Fetch fresh data in background
+  // 🚀 BACKGROUND REFRESH
   useEffect(() => {
     loadDirectory()
   }, [])
 
   async function loadDirectory() {
-    // Only set loading true if we have nothing to show
+    // Only show spinner if we strictly have nothing to show
     if (businesses.length === 0) setLoading(true)
     
     try {
-      // ✅ Use the Client Helper (This checks & writes to Cache automatically)
+      // ✅ Use the helper! This saves to cache automatically.
       const data = await getDirectoryView()
 
-      // Map Backend -> UI structure
       const formattedData = data.map((biz) => ({
         ...biz,
         hours: biz.operational_info,
@@ -63,6 +63,7 @@ export default function Directory() {
         Explore AI-ready local businesses and services.
       </p>
 
+      {/* ✅ If businesses exist, we show them immediately. No "Loading" text. */}
       {loading ? (
         <div className="muted">Loading directory...</div>
       ) : businesses.length === 0 ? (
@@ -93,9 +94,7 @@ export default function Directory() {
                         border: '1px solid #eee',
                         flexShrink: 0 
                     }}
-                    onError={(e) => {
-                      e.target.style.display = 'none'
-                    }}
+                    onError={(e) => { e.target.style.display = 'none' }}
                   />
                 ) : null}
 

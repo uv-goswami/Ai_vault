@@ -2,11 +2,9 @@ export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 export const BASE = API_BASE
 
 // --- 🚀 SYSTEM DESIGN: CLIENT-SIDE CACHE ---
-// Stores API responses in memory.
-// Key = URL, Value = JSON Data
 const REQUEST_CACHE = new Map()
 
-// ✅ Helper to read cache synchronously (Essential for SWR Pattern)
+// ✅ Helper to read cache synchronously (Essential for Instant Load)
 export function getFromCache(path) {
   const url = `${BASE}${path}`
   return REQUEST_CACHE.get(url) || null
@@ -16,7 +14,7 @@ async function api(path, init = {}) {
   const url = `${BASE}${path}`
   const method = init.method || 'GET'
 
-  // 1. CACHE HIT: If we have the data, return it INSTANTLY (0ms latency)
+  // 1. CACHE HIT (Instant Return)
   if (method === 'GET' && REQUEST_CACHE.has(url)) {
     return REQUEST_CACHE.get(url)
   }
@@ -30,24 +28,22 @@ async function api(path, init = {}) {
   // 3. ERROR HANDLING
   if (!res.ok) {
     const text = await res.text()
-
-    // Special handling for 404 on operational info
+    // Ignore 404 for optional operational info
     if (res.status === 404 && path.includes('operational-info')) {
         return null;
     }
-
     console.error(`API Error: ${res.status}`, text)
     throw new Error(`HTTP ${res.status}: ${text}`)
   }
 
   const data = await res.json()
 
-  // 4. CACHE SET: Store the result for next time
+  // 4. CACHE SET (Save for next time)
   if (method === 'GET') {
     REQUEST_CACHE.set(url, data)
   }
 
-  // 5. CACHE INVALIDATION: Write-Through Logic
+  // 5. CACHE INVALIDATION (Clear on updates)
   if (['POST', 'PATCH', 'DELETE'].includes(method)) {
     REQUEST_CACHE.clear()
   }
@@ -55,7 +51,7 @@ async function api(path, init = {}) {
   return data
 }
 
-// --- 🚀 NEW: PREFETCHING UTILITY ---
+// --- PREFETCH ---
 export const prefetch = (path) => {
   const url = `${BASE}${path}`
   if (!REQUEST_CACHE.has(url)) {
@@ -65,10 +61,7 @@ export const prefetch = (path) => {
 
 // --- AUTH ---
 export const login = (email, password) =>
-  api('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password })
-  })
+  api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
 
 // --- USERS ---
 export const createUser = (payload) =>
@@ -79,7 +72,7 @@ export const getUserByEmail = (email) =>
 
 // --- BUSINESS ---
 
-// ✅ NEW: Add this function to handle Directory Caching properly
+// ✅ THIS IS THE FIX: Use this helper in Directory.jsx so it uses the cache
 export const getDirectoryView = () => 
   api('/business/directory-view')
 
@@ -96,10 +89,7 @@ export const getBusinessByOwner = (ownerId) =>
   api(`/business/by-owner/${ownerId}`)
 
 export const updateBusiness = (businessId, payload) =>
-  api(`/business/${businessId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload)
-  })
+  api(`/business/${businessId}`, { method: 'PATCH', body: JSON.stringify(payload) })
 
 // --- SERVICES ---
 export const createService = (payload) =>
@@ -125,10 +115,7 @@ export const getOperationalInfoByBusiness = (businessId) =>
   api(`/operational-info/by-business/${businessId}`)
 
 export const updateOperationalInfoByBusiness = (businessId, payload) =>
-  api(`/operational-info/by-business/${businessId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload)
-  })
+  api(`/operational-info/by-business/${businessId}`, { method: 'PATCH', body: JSON.stringify(payload) })
 
 export const deleteOperationalInfoByBusiness = (businessId) =>
   api(`/operational-info/by-business/${businessId}`, { method: 'DELETE' })
