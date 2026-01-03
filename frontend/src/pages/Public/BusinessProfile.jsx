@@ -1,20 +1,28 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getBusiness, listServices, listMedia } from '../../api/client'
+// ✅ Import getFromCache
+import { getBusiness, listServices, listMedia, getFromCache } from '../../api/client'
 import JsonBlock from '../../components/JsonBlock'
 import '../../styles/businessprofile.css'
 
 export default function BusinessProfile() {
   const { businessId } = useParams()
-  const [business, setBusiness] = useState(null)
-  const [services, setServices] = useState([])
-  const [media, setMedia] = useState([])
+  
+  // 🚀 INSTANT LOAD: Initialize states from cache
+  const [business, setBusiness] = useState(() => getFromCache(`/business/${businessId}`) || null)
+  const [services, setServices] = useState(() => getFromCache(`/services/?business_id=${businessId}&limit=100&offset=0`) || [])
+  const [media, setMedia] = useState(() => getFromCache(`/media/?business_id=${businessId}&limit=100&offset=0`) || [])
 
+  // 🚀 REVALIDATE
   useEffect(() => {
     if (!businessId) return
+    
+    // We update these in parallel, updating state as they come in
     getBusiness(businessId).then(setBusiness).catch(() => {})
-    listServices(businessId).then(setServices).catch(() => {})
-    listMedia(businessId).then(setMedia).catch(() => {})
+    
+    // Note: Assuming listServices defaults (limit=100, offset=0) in client.js matches logic here
+    listServices(businessId, 100, 0).then(setServices).catch(() => {})
+    listMedia(businessId, 100, 0).then(setMedia).catch(() => {})
   }, [businessId])
 
   return (

@@ -1,21 +1,34 @@
 import React, { useEffect, useState } from "react"
-import { API_BASE } from "../../api/client"
+// ✅ Import getFromCache
+import { API_BASE, getFromCache } from "../../api/client"
 import "../../styles/directory.css"
 
 export default function Directory() {
-  const [businesses, setBusinesses] = useState([])
-  const [loading, setLoading] = useState(true)
+  // 🚀 INSTANT LOAD: Initialize state from cache
+  const [businesses, setBusinesses] = useState(() => {
+    const cached = getFromCache('/business/directory-view')
+    // Ensure we handle the data mapping if it exists in cache
+    if (Array.isArray(cached)) {
+       return cached.map((biz) => ({
+        ...biz,
+        hours: biz.operational_info,
+      }))
+    }
+    return []
+  })
+  
+  // Only show loading spinner if we strictly have NO data
+  const [loading, setLoading] = useState(() => businesses.length === 0)
 
+  // 🚀 REVALIDATE: Fetch fresh data in background
   useEffect(() => {
     loadDirectory()
   }, [])
 
   async function loadDirectory() {
-    setLoading(true)
+    if (businesses.length === 0) setLoading(true)
     try {
       // ✅ SYSTEM DESIGN OPTIMIZATION: Aggregated Fetch
-      // Instead of fetching a list and then looping to fetch details (N+1 problem),
-      // we make ONE single request that returns everything pre-joined.
       const res = await fetch(`${API_BASE}/business/directory-view`)
       
       if (!res.ok) {
@@ -24,18 +37,17 @@ export default function Directory() {
 
       const data = await res.json()
 
-      // Map the new backend structure to match what the UI expects
-      // Backend sends 'operational_info', UI expects 'hours'
+      // Map Backend -> UI structure
       const formattedData = data.map((biz) => ({
         ...biz,
-        hours: biz.operational_info, // Map operational_info -> hours
-        // media, services, and coupons are already attached by the backend!
+        hours: biz.operational_info,
       }))
 
       setBusinesses(formattedData)
     } catch (err) {
       console.error("Failed to load directory:", err)
-      setBusinesses([])
+      // Only set empty if we really failed and had nothing
+      if (businesses.length === 0) setBusinesses([])
     } finally {
       setLoading(false)
     }
@@ -71,7 +83,7 @@ export default function Directory() {
               {/* Header with small Logo layout */}
               <header className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
                 
-                {/* Logo Section - Only renders if media exists */}
+                {/* Logo Section */}
                 {biz.media && biz.media.length > 0 ? (
                   <img
                     src={getImageUrl(biz.media[0].url)}
@@ -90,7 +102,7 @@ export default function Directory() {
                   />
                 ) : null}
 
-                {/* Text Section (Name & Type) */}
+                {/* Text Section */}
                 <div style={{ flexGrow: 1 }}>
                     <h2 itemProp="name" style={{ margin: 0, fontSize: '1.3rem' }}>{biz.name}</h2>
                     <span className="biz-type" style={{ display:'block', marginTop:'4px', fontSize:'0.9rem', color:'#666' }}>

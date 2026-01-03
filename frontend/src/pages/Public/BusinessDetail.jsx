@@ -1,30 +1,41 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+// ✅ Import getFromCache
 import {
   getBusiness,
   getOperationalInfoByBusiness,
   listMedia,
   listServices,
   listCoupons,
-  API_BASE
+  API_BASE,
+  getFromCache
 } from '../../api/client'
 import '../../styles/directory.css'
-import '../../styles/dashboard.css' // ✅ Import dashboard styles to use 'panel' class
+import '../../styles/dashboard.css'
 
 export default function BusinessDetail() {
   const { id } = useParams()
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+
+  // 🚀 INSTANT LOAD: Initialize individual states from cache
+  const [business, setBusiness] = useState(() => getFromCache(`/business/${id}`) || null)
+  const [hours, setHours] = useState(() => getFromCache(`/operational-info/by-business/${id}`) || null)
+  const [media, setMedia] = useState(() => getFromCache(`/media/?business_id=${id}&limit=100&offset=0`) || [])
+  const [services, setServices] = useState(() => getFromCache(`/services/?business_id=${id}&limit=100&offset=0`) || [])
+  const [coupons, setCoupons] = useState(() => getFromCache(`/coupons/?business_id=${id}&limit=100&offset=0`) || [])
+
+  const [loading, setLoading] = useState(!business) // Only show loading if we have ZERO business data
   const [error, setError] = useState(null)
 
+  // 🚀 REVALIDATE: Fetch everything in background
   useEffect(() => {
     loadFullProfile()
   }, [id])
 
   async function loadFullProfile() {
-    setLoading(true)
+    if (!business) setLoading(true)
     try {
-      const [biz, opInfo, media, services, coupons] = await Promise.all([
+      // We still use Promise.all to fetch concurrently
+      const [bizData, opData, mediaData, serviceData, couponData] = await Promise.all([
         getBusiness(id),
         getOperationalInfoByBusiness(id).catch(() => null),
         listMedia(id, 100, 0).catch(() => []),
@@ -32,13 +43,11 @@ export default function BusinessDetail() {
         listCoupons(id, 100, 0).catch(() => [])
       ])
 
-      setData({
-        business: biz,
-        hours: opInfo,
-        media: media,
-        services: services,
-        coupons: coupons
-      })
+      setBusiness(bizData)
+      setHours(opData)
+      setMedia(mediaData)
+      setServices(serviceData)
+      setCoupons(couponData)
     } catch (err) {
       console.error(err)
       setError("Could not load business details.")
@@ -47,7 +56,7 @@ export default function BusinessDetail() {
     }
   }
 
-  // ✅ Helper: Robust Time Formatter (Fixes "undefined" issue)
+  // ✅ Helper: Robust Time Formatter
   const formatTime = (timeStr) => {
     if (!timeStr) return '';
     const parts = timeStr.split(':');
@@ -66,10 +75,9 @@ export default function BusinessDetail() {
 
   if (loading) return <div className="container" style={{padding:'2rem'}}>Loading details...</div>
   if (error) return <div className="container" style={{padding:'2rem', color:'red'}}>{error}</div>
-  if (!data) return null
+  if (!business) return null
 
-  const { business, hours, media, services, coupons } = data
-
+  // (The rest of your JSX remains exactly the same as your input)
   return (
     <div className="container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem 1rem' }}>
       
@@ -84,7 +92,6 @@ export default function BusinessDetail() {
           {business.name}
         </h1>
         
-        {/* ✅ Slogan Added Here */}
         {business.quote_slogan && (
           <p style={{ fontStyle: 'italic', color: '#666', marginBottom: '0.8rem', fontSize: '0.95rem' }}>
             "{business.quote_slogan}"
@@ -97,10 +104,9 @@ export default function BusinessDetail() {
           </span>
           {business.address && <span>📍 {business.address}</span>}
           
-          {/* ✅ Lat/Long Added Here */}
           {business.latitude && business.longitude && (
              <a 
-                href={`https://www.google.com/maps/search/?api=1&query=${business.latitude},${business.longitude}`} 
+                href={`http://maps.google.com/maps?q=${business.latitude},${business.longitude}`} 
                 target="_blank" 
                 rel="noreferrer"
                 style={{ fontSize:'0.9rem', color: '#555', textDecoration:'underline' }}
@@ -114,7 +120,6 @@ export default function BusinessDetail() {
           {business.description}
         </p>
 
-        {/* ✅ Identification Mark */}
         {business.identification_mark && (
             <div style={{ marginTop: '10px', fontSize: '0.85rem', color: '#888' }}>
                 ID Mark: {business.identification_mark}
@@ -163,19 +168,16 @@ export default function BusinessDetail() {
             {hours ? (
                <li style={{ marginTop:'1rem', paddingTop:'1rem', borderTop:'1px dashed #eee' }}>
                  <strong>🕒 Open Hours:</strong>
-                 {/* ✅ Fixed Time Formatting */}
                  <div style={{ fontSize:'1.1rem', marginTop:'0.2rem' }}>
                    {hours.opening_hours ? formatTime(hours.opening_hours) : 'N/A'} — {hours.closing_hours ? formatTime(hours.closing_hours) : 'N/A'}
                  </div>
                  
-                 {/* ✅ Off Days */}
                  {hours.off_days && hours.off_days.length > 0 && (
                      <div style={{ marginTop: '5px', color: '#d32f2f', fontSize: '0.9rem' }}>
                          Closed: {hours.off_days.join(', ')}
                      </div>
                  )}
 
-                 {/* ✅ Amenities Badges (Subtle Style) */}
                  <div style={{ display:'flex', flexWrap:'wrap', gap:'8px', marginTop:'10px' }}>
                     {hours.wifi_available && <span style={badgeStyle}>📶 WiFi</span>}
                     {hours.delivery_options && <span style={badgeStyle}>🚚 {hours.delivery_options}</span>}
@@ -198,7 +200,6 @@ export default function BusinessDetail() {
                 <li key={s.service_id} style={{ marginBottom: '1rem', borderBottom:'1px dashed #f0f0f0', paddingBottom:'0.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <div style={{ fontWeight: 'bold' }}>{s.name}</div>
-                    {/* ✅ Price Symbol Added */}
                     {s.price && <div style={{ fontWeight:'bold', color:'var(--primary-color, #2c3e50)' }}>₹{s.price}</div>}
                   </div>
                   <div style={{ fontSize:'0.9rem', color:'#666', margin:'2px 0' }}>{s.description}</div>
@@ -237,7 +238,6 @@ export default function BusinessDetail() {
   )
 }
 
-// Simple internal style for badges to keep it clean
 const badgeStyle = {
     background: '#f1f1f1',
     color: '#555',
