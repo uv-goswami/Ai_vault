@@ -1,6 +1,13 @@
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
+from typing import List, Optional
+
+# ✅ NEW: Imports needed for the Aggregated View
+from .operational_info import OperationalInfoOut
+from .media import MediaOut
+from .services import ServiceOut
+from .coupons import CouponOut
 
 class BusinessCreate(BaseModel):
     owner_id: UUID
@@ -40,8 +47,6 @@ class BusinessOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
-
 class BusinessUpdate(BaseModel):
     # All fields optional for partial update
     name: str | None = None
@@ -56,3 +61,23 @@ class BusinessUpdate(BaseModel):
     quote_slogan: str | None = None
     identification_mark: str | None = None
     published: bool | None = None
+
+# ✅ NEW: Aggregated Schema for Directory View (System Design Optimization)
+class BusinessDirectoryView(BaseModel):
+    business_id: UUID
+    name: str
+    description: Optional[str] = None
+    address: Optional[str] = None
+    business_type: Optional[str] = None
+    quote_slogan: Optional[str] = None
+    identification_mark: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    
+    # Nested Data
+    operational_info: Optional[OperationalInfoOut] = None
+    media: List[MediaOut] = []
+    services: List[ServiceOut] = []
+    coupons: List[CouponOut] = []
+
+    model_config = {"from_attributes": True}
