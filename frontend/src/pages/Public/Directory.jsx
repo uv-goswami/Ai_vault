@@ -6,17 +6,19 @@ import "../../styles/directory.css"
 export default function Directory() {
   // 🚀 INSTANT LOAD: Initialize state from cache
   const [businesses, setBusinesses] = useState(() => {
+    // Check if we have the data in memory
     const cached = getFromCache('/business/directory-view')
-    // Ensure we handle the data mapping if it exists in cache
+    
+    // If cache exists, we must format it immediately so the UI renders perfectly
     if (Array.isArray(cached)) {
-       return cached.map((biz) => ({
+      return cached.map((biz) => ({
         ...biz,
-        hours: biz.operational_info,
+        hours: biz.operational_info, // Map operational_info -> hours
       }))
     }
     return []
   })
-  
+
   // Only show loading spinner if we strictly have NO data
   const [loading, setLoading] = useState(() => businesses.length === 0)
 
@@ -26,7 +28,9 @@ export default function Directory() {
   }, [])
 
   async function loadDirectory() {
+    // Only set loading true if we have nothing to show
     if (businesses.length === 0) setLoading(true)
+    
     try {
       // ✅ SYSTEM DESIGN OPTIMIZATION: Aggregated Fetch
       const res = await fetch(`${API_BASE}/business/directory-view`)
@@ -40,13 +44,12 @@ export default function Directory() {
       // Map Backend -> UI structure
       const formattedData = data.map((biz) => ({
         ...biz,
-        hours: biz.operational_info,
+        hours: biz.operational_info, // Map operational_info -> hours
       }))
 
       setBusinesses(formattedData)
     } catch (err) {
       console.error("Failed to load directory:", err)
-      // Only set empty if we really failed and had nothing
       if (businesses.length === 0) setBusinesses([])
     } finally {
       setLoading(false)
