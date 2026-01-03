@@ -119,14 +119,7 @@ export default function Services() {
               value={form.price}
               onChange={e => setForm({ ...form, price: e.target.value })}
             />
-            <select
-              value={form.service_type}
-              onChange={e => setForm({ ...form, service_type: e.target.value })}
-            >
-              <option value="restaurant">Restaurant</option>
-              <option value="salon">Salon</option>
-              <option value="clinic">Clinic</option>
-            </select>
+            
             <button type="submit">Create Service</button>
           </form>
         </div>
