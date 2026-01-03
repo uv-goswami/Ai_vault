@@ -120,7 +120,7 @@ def update_business(business_id: UUID, payload: BusinessUpdate, db: Session = De
 
     # ✅ Fixed: Use timezone-aware UTC
     business.updated = datetime.now(timezone.utc)
-    
+      
     db.commit()
     db.refresh(business)
 
