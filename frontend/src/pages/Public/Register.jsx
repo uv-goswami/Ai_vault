@@ -123,8 +123,6 @@ export default function Register() {
             <option value="restaurant">Restaurant</option>
             <option value="salon">Salon</option>
             <option value="clinic">Clinic</option>
-            <option value="retail">Retail</option>
-            <option value="other">Other</option>
           </select>
           <input
             name="businessAddress"
