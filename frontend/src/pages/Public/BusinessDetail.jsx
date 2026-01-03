@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-// ✅ Import getFromCache
 import {
   getBusiness,
   getOperationalInfoByBusiness,
@@ -22,8 +21,11 @@ export default function BusinessDetail() {
   const [media, setMedia] = useState(() => getFromCache(`/media/?business_id=${id}&limit=100&offset=0`) || [])
   const [services, setServices] = useState(() => getFromCache(`/services/?business_id=${id}&limit=100&offset=0`) || [])
   const [coupons, setCoupons] = useState(() => getFromCache(`/coupons/?business_id=${id}&limit=100&offset=0`) || [])
+  
+  // NEW: State for JSON-LD Data
+  const [jsonLdData, setJsonLdData] = useState(null)
 
-  const [loading, setLoading] = useState(!business) // Only show loading if we have ZERO business data
+  const [loading, setLoading] = useState(!business)
   const [error, setError] = useState(null)
 
   // 🚀 REVALIDATE: Fetch everything in background
@@ -31,10 +33,27 @@ export default function BusinessDetail() {
     loadFullProfile()
   }, [id])
 
+  // NEW: Inject JSON-LD into <head> when available
+  useEffect(() => {
+    if (!jsonLdData) return
+
+    // Create the script tag
+    const script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.text = JSON.stringify(jsonLdData)
+    
+    // Append to head
+    document.head.appendChild(script)
+
+    // Cleanup: Remove script when component unmounts or data changes
+    return () => {
+      document.head.removeChild(script)
+    }
+  }, [jsonLdData])
+
   async function loadFullProfile() {
     if (!business) setLoading(true)
     try {
-      // We still use Promise.all to fetch concurrently
       const [bizData, opData, mediaData, serviceData, couponData] = await Promise.all([
         getBusiness(id),
         getOperationalInfoByBusiness(id).catch(() => null),
@@ -48,6 +67,23 @@ export default function BusinessDetail() {
       setMedia(mediaData)
       setServices(serviceData)
       setCoupons(couponData)
+
+      // NEW: Fetch the specific JSON-LD for this business
+      // We do this separately to avoid breaking the main UI if it fails
+      try {
+        const jsonRes = await fetch(`${API_BASE}/jsonld?business_id=${id}`)
+        if (jsonRes.ok) {
+           const jsonFeeds = await jsonRes.json()
+           if (Array.isArray(jsonFeeds) && jsonFeeds.length > 0) {
+              // The backend returns a stringified JSON string inside 'jsonld_data'
+              const latestFeed = JSON.parse(jsonFeeds[0].jsonld_data)
+              setJsonLdData(latestFeed)
+           }
+        }
+      } catch (jsonErr) {
+        console.error("Failed to load JSON-LD", jsonErr)
+      }
+
     } catch (err) {
       console.error(err)
       setError("Could not load business details.")
@@ -77,7 +113,6 @@ export default function BusinessDetail() {
   if (error) return <div className="container" style={{padding:'2rem', color:'red'}}>{error}</div>
   if (!business) return null
 
-  // (The rest of your JSX remains exactly the same as your input)
   return (
     <div className="container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem 1rem' }}>
       
@@ -106,7 +141,7 @@ export default function BusinessDetail() {
           
           {business.latitude && business.longitude && (
              <a 
-                href={`http://maps.google.com/maps?q=${business.latitude},${business.longitude}`} 
+                href={`https://maps.google.com/?q=${business.latitude},${business.longitude}`} 
                 target="_blank" 
                 rel="noreferrer"
                 style={{ fontSize:'0.9rem', color: '#555', textDecoration:'underline' }}
