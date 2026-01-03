@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from "react"
-import {
-  listBusinesses,
-  getOperationalInfoByBusiness,
-  listMedia,
-  listServices,
-  listCoupons,
-  API_BASE
-} from "../../api/client"
+import { API_BASE } from "../../api/client"
 import "../../styles/directory.css"
 
 export default function Directory() {
@@ -20,25 +13,26 @@ export default function Directory() {
   async function loadDirectory() {
     setLoading(true)
     try {
-      const businessList = await listBusinesses()
+      // ✅ SYSTEM DESIGN OPTIMIZATION: Aggregated Fetch
+      // Instead of fetching a list and then looping to fetch details (N+1 problem),
+      // we make ONE single request that returns everything pre-joined.
+      const res = await fetch(`${API_BASE}/business/directory-view`)
+      
+      if (!res.ok) {
+        throw new Error(`Directory fetch failed: ${res.statusText}`)
+      }
 
-      const enrichedData = await Promise.all(
-        businessList.map(async (biz) => {
-          try {
-            const [opInfo, media, services, coupons] = await Promise.all([
-              getOperationalInfoByBusiness(biz.business_id).catch(() => null),
-              listMedia(biz.business_id, 1, 0).catch(() => []),
-              listServices(biz.business_id, 100, 0).catch(() => []), 
-              listCoupons(biz.business_id, 100, 0).catch(() => [])
-            ])
+      const data = await res.json()
 
-            return { ...biz, hours: opInfo, media, services, coupons }
-          } catch (e) {
-            return { ...biz, hours: null, media: [], services: [], coupons: [] }
-          }
-        })
-      )
-      setBusinesses(enrichedData)
+      // Map the new backend structure to match what the UI expects
+      // Backend sends 'operational_info', UI expects 'hours'
+      const formattedData = data.map((biz) => ({
+        ...biz,
+        hours: biz.operational_info, // Map operational_info -> hours
+        // media, services, and coupons are already attached by the backend!
+      }))
+
+      setBusinesses(formattedData)
     } catch (err) {
       console.error("Failed to load directory:", err)
       setBusinesses([])
@@ -72,10 +66,8 @@ export default function Directory() {
               className="directory-card"
               itemScope
               itemType="https://schema.org/LocalBusiness"
-              // Added some padding for better spacing with the new header layout
-              style={{ padding: '20px' }} 
+              style={{ padding: '20px' }}
             >
-              
               {/* Header with small Logo layout */}
               <header className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
                 
@@ -84,17 +76,15 @@ export default function Directory() {
                   <img
                     src={getImageUrl(biz.media[0].url)}
                     alt={biz.name}
-                    // Inline styles for logo look: small, square, rounded corners
                     style={{ 
                         width: '60px', 
                         height: '60px', 
                         objectFit: 'cover', 
                         borderRadius: '8px',
                         border: '1px solid #eee',
-                        flexShrink: 0 // Prevents squishing
+                        flexShrink: 0 
                     }}
                     onError={(e) => {
-                      // If image fails to load, simply hide this element so text moves left
                       e.target.style.display = 'none'
                     }}
                   />
@@ -109,7 +99,7 @@ export default function Directory() {
                 </div>
               </header>
 
-              {/* Description (Only show if exists) */}
+              {/* Description */}
               {biz.description && (
                 <p className="card-description" itemProp="description" style={{ marginBottom: '15px' }}>
                   {biz.description.length > 90 
@@ -134,14 +124,14 @@ export default function Directory() {
                   </p>
                 )}
 
-                {/* Only show services count if > 0 */}
+                {/* Services Count */}
                 {biz.services.length > 0 && (
                   <p>
                     <strong>🛠 Services:</strong> {biz.services.length} available
                   </p>
                 )}
 
-                {/* Positive Green Badge for Coupons */}
+                {/* Coupon Badge */}
                 {biz.coupons.length > 0 && (
                   <div style={{
                     marginTop: '10px', 
