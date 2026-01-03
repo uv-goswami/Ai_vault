@@ -121,7 +121,7 @@ def generate_metadata(business_id: UUID = Query(...), db: Session = Depends(get_
     Return ONLY a valid JSON object with these 4 keys. 
     IMPORTANT: The values for 'keywords', 'intent_labels', and 'detected_entities' MUST be simple comma-separated STRINGS, not arrays.
 
-    1. "keywords": A single string of 20 comma-separated specific keywords (combine location + service + slogan).
+    1. "keywords": A single string of 15 comma-separated specific keywords (combine location + service + slogan).
     2. "extracted_insights": A compelling 1-sentence marketing pitch.
     3. "intent_labels": A single string of 3 user intents (e.g., "Booking, Inquiry, Discovery").
     4. "detected_entities": A single string listing important entities (City, Services, Brands).

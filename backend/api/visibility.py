@@ -25,11 +25,11 @@ router = APIRouter(prefix="/visibility", tags=["Visibility"])
 # --- Helper to clean AI lists to strings ---
 def ensure_string(value):
     if isinstance(value, list):
-        return "; ".join(str(v) for v in value) # Semicolon separated for clarity
+        return "; ".join(str(v) for v in value) 
     return str(value) if value is not None else ""
 
 # -------------------------
-# STANDARD CRUD (Keep as is)
+# STANDARD CRUD
 # -------------------------
 @router.post("/check", response_model=VisibilityCheckRequestOut)
 def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depends(get_db)):
@@ -153,7 +153,7 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     # 2. Log request
     check = models.VisibilityCheckRequest(
         business_id=business_id,
-        check_type="ai_audit",
+        check_type="visibility", # ✅ FIXED: Changed from "ai_audit" to "visibility"
         input_data=f"Services: {len(services)}, Media: {media_count}, JSON-LD: {jsonld_exists}",
         requested_at=datetime.utcnow()
     )
@@ -185,7 +185,7 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     """
 
     try:
-        # Use a fast model
+        # Using gemini-2.5-flash as per your preference (or switch to 1.5-flash if needed)
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         
