@@ -34,7 +34,7 @@ export default function Home() {
       {/* Hero Section */}
       <header className="hero">
         <div className="hero-inner">
-          <h1>Elevate your local visibility with AiVault</h1>
+          <h1>Elevate your local visibility with AV</h1>
           <p className="hero-sub">
             Build a rich business profile, generate Schema.org JSON‑LD, and turn your services and media
             into search‑ready experiences.
@@ -137,7 +137,7 @@ export default function Home() {
                 
                 <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
                     <Link to="/register" style={{ fontWeight: 'bold', color: '#007bff', textDecoration: 'none' }}>
-                        Create a free AiVault profile to fix this →
+                        Create a free AV profile to fix this →
                     </Link>
                 </div>
               </div>

@@ -84,7 +84,7 @@ export default function Register() {
     <div className="register-page">
       <div className="register-panel">
         <h2 className="register-title">Create your account</h2>
-        <p className="register-sub">Join AiVault and start enhancing your visibility</p>
+        <p className="register-sub">Join AV and start enhancing your visibility</p>
 
         <form className="register-form" onSubmit={handleSubmit}>
           <input

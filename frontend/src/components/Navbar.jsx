@@ -16,7 +16,7 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       <div className="nav-inner">
-        <Link to="/" className="logo">AiVault</Link>
+        <Link to="/" className="logo">AV</Link>
 
         <div className="nav-links">
           <NavLink to="/" className="nav-item">Home</NavLink>
