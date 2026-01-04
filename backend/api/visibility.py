@@ -1,5 +1,8 @@
 import os
 import json
+import requests
+from bs4 import BeautifulSoup
+from pydantic import BaseModel, HttpUrl
 import google.generativeai as genai
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -29,7 +32,7 @@ def ensure_string(value):
     return str(value) if value is not None else ""
 
 # -------------------------
-# STANDARD CRUD
+# STANDARD CRUD (Internal Use)
 # -------------------------
 @router.post("/check", response_model=VisibilityCheckRequestOut)
 def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depends(get_db)):
@@ -134,7 +137,7 @@ def get_suggestion(suggestion_id: UUID, db: Session = Depends(get_db)):
     return suggestion
 
 # -------------------------
-# ✅ STRICT VISIBILITY CHECKER (FIXED)
+# ✅ STRICT VISIBILITY CHECKER (INTERNAL)
 # -------------------------
 @router.post("/run", response_model=VisibilityCheckResultOut)
 def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)):
@@ -158,8 +161,7 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     db.add(check)
     db.commit()
 
-    # 3. Construct Prompt (Safe for None types)
-    # Ensure no NoneType errors in f-string
+    # 3. Construct Prompt
     s_names = [s.name for s in services if s.name]
     services_str = ", ".join(s_names) if s_names else "None"
     
@@ -193,7 +195,7 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     """
 
     try:
-        # ✅ SWITCHED TO 2.5 (Using full path to be safe)
+        # ✅ Using Gemini 2.5 Flash as requested
         model = genai.GenerativeModel('models/gemini-2.5-flash')
         
         response = model.generate_content(prompt)
@@ -232,15 +234,12 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     except Exception as e:
         print(f"❌ AI VISIBILITY CHECK FAILED: {str(e)}")
         
-        # ✅ TRANSPARENT ERROR REPORTING
-        # We now return the ACTUAL error in the issues list so you know what's wrong.
+        # ✅ Transparent Fallback
         error_msg = str(e)
-        
         strict_score = 0
-        issues = [f"AI Error: {error_msg}"] # <--- THIS IS KEY
+        issues = [f"AI Error: {error_msg}"]
         recs = ["Check API Quota", "Verify Data"]
 
-        # Manual strict logic continues...
         if not jsonld_exists:
             issues.append("CRITICAL: Missing JSON-LD")
             recs.append("Generate JSON-LD immediately")
@@ -262,7 +261,7 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
         else:
             strict_score += 10
 
-        final_score = min(strict_score, 50) # Cap fallback at 50
+        final_score = min(strict_score, 50) 
 
         result = models.VisibilityCheckResult(
             request_id=check.request_id,
@@ -275,3 +274,75 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
         db.add(result)
         db.commit()
         return result
+
+
+# -------------------------
+# ✅ NEW: EXTERNAL (PUBLIC) AUDIT
+# -------------------------
+class ExternalAuditRequest(BaseModel):
+    url: HttpUrl
+
+@router.post("/external")
+def audit_external_site(data: ExternalAuditRequest):
+    # 1. Scrape the website (Basic)
+    try:
+        headers = {'User-Agent': 'AiVault-Auditor/1.0'}
+        response = requests.get(str(data.url), headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Extract Key Data
+        title = soup.title.string if soup.title else "Missing Title"
+        desc_tag = soup.find("meta", attrs={"name": "description"})
+        description = desc_tag["content"] if desc_tag else "Missing Description"
+        
+        h1_count = len(soup.find_all('h1'))
+        img_count = len(soup.find_all('img'))
+        json_ld = soup.find('script', type='application/ld+json')
+        
+        raw_text = soup.get_text(separator=' ', strip=True)[:3000] 
+
+    except Exception as e:
+        return {
+            "error": f"Could not scan website: {str(e)}",
+            "score": 0,
+            "bot_analysis": "Site Unreachable",
+            "human_analysis": "Site Unreachable",
+            "recommendations": ["Check if URL is correct", "Ensure site is public"]
+        }
+
+    # 2. Ask Gemini
+    prompt = f"""
+    Act as an SEO & AI Visibility Auditor. Analyze this raw website data:
+    
+    URL: {data.url}
+    Title: {title}
+    Description: {description}
+    H1 Tags: {h1_count}
+    Images: {img_count}
+    JSON-LD Schema Found: {'Yes' if json_ld else 'NO'}
+    Sample Content: {raw_text[:500]}...
+
+    Grading Criteria:
+    - JSON-LD missing? Max score 50.
+    - No H1? Deduct 10.
+    - Description missing? Deduct 20.
+
+    Return JSON:
+    {{
+        "score": 0-100,
+        "bot_analysis": "Can bots understand this?",
+        "human_analysis": "Is it clear for humans?",
+        "recommendations": ["Action 1", "Action 2"]
+    }}
+    """
+
+    try:
+        model = genai.GenerativeModel('models/gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        clean_text = response.text.replace("```json", "").replace("```", "").strip()
+        result = json.loads(clean_text)
+        return result
+    except Exception as e:
+        return {"error": "AI Analysis Failed", "details": str(e)}

@@ -197,3 +197,7 @@ export const listVisibilityResults = (businessId, limit = 20, offset = 0) =>
 
 export const listVisibilitySuggestions = (businessId, limit = 20, offset = 0) =>
   api(`/visibility/suggestion?business_id=${businessId}&limit=${limit}&offset=${offset}`)
+
+// ✅ NEW: External Visibility Check (For Home Page)
+export const runExternalVisibilityCheck = (url) =>
+  api('/visibility/external', { method: 'POST', body: JSON.stringify({ url }) })
