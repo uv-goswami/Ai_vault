@@ -12,7 +12,8 @@ from api import (
     media,
     visibility,
     jsonld,
-    operational_info
+    operational_info,
+    public
 )
 
 
@@ -29,7 +30,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://aivault-frontend.onrender.com"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,7 +47,7 @@ app.include_router(media.router)
 app.include_router(services.router)
 app.include_router(visibility.router)
 app.include_router(jsonld.router)
-
+app.include_router(public.router)
 app.include_router(operational_info.router, prefix="/operational-info", tags=["Operational Info"])
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
