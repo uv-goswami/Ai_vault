@@ -25,13 +25,119 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 router = APIRouter(prefix="/visibility", tags=["Visibility"])
 
+# --- Helper to clean AI lists to strings ---
 def ensure_string(value):
     if isinstance(value, list):
         return "; ".join(str(v) for v in value) 
     return str(value) if value is not None else ""
 
 # -------------------------
-# INTERNAL AUDIT (STRICT)
+# STANDARD CRUD (Internal Use)
+# -------------------------
+@router.post("/check", response_model=VisibilityCheckRequestOut)
+def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depends(get_db)):
+    business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    new_check = models.VisibilityCheckRequest(**data.model_dump())
+    db.add(new_check)
+    db.commit()
+    db.refresh(new_check)
+    return new_check
+
+@router.get("/check", response_model=List[VisibilityCheckRequestOut])
+def list_check_requests(
+    business_id: UUID = Query(...),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(models.VisibilityCheckRequest)
+        .filter_by(business_id=business_id)
+        .order_by(models.VisibilityCheckRequest.requested_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+@router.get("/check/{check_id}", response_model=VisibilityCheckRequestOut)
+def get_check_request(check_id: UUID, db: Session = Depends(get_db)):
+    check = db.query(models.VisibilityCheckRequest).filter_by(request_id=check_id).first()
+    if not check:
+        raise HTTPException(status_code=404, detail="Check request not found")
+    return check
+
+@router.post("/result", response_model=VisibilityCheckResultOut)
+def create_result(data: VisibilityCheckResultCreate, db: Session = Depends(get_db)):
+    business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    new_result = models.VisibilityCheckResult(**data.model_dump())
+    db.add(new_result)
+    db.commit()
+    db.refresh(new_result)
+    return new_result
+
+@router.get("/result", response_model=List[VisibilityCheckResultOut])
+def list_results(
+    business_id: UUID = Query(...),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(models.VisibilityCheckResult)
+        .filter_by(business_id=business_id)
+        .order_by(models.VisibilityCheckResult.completed_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+@router.get("/result/{result_id}", response_model=VisibilityCheckResultOut)
+def get_result(result_id: UUID, db: Session = Depends(get_db)):
+    result = db.query(models.VisibilityCheckResult).filter_by(result_id=result_id).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="Result not found")
+    return result
+
+@router.post("/suggestion", response_model=VisibilitySuggestionOut)
+def create_suggestion(data: VisibilitySuggestionCreate, db: Session = Depends(get_db)):
+    business = db.query(models.BusinessProfile).filter_by(business_id=data.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    new_suggestion = models.VisibilitySuggestion(**data.model_dump())
+    db.add(new_suggestion)
+    db.commit()
+    db.refresh(new_suggestion)
+    return new_suggestion
+
+@router.get("/suggestion", response_model=List[VisibilitySuggestionOut])
+def list_suggestions(
+    business_id: UUID = Query(...),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(models.VisibilitySuggestion)
+        .filter_by(business_id=business_id)
+        .order_by(models.VisibilitySuggestion.suggested_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+@router.get("/suggestion/{suggestion_id}", response_model=VisibilitySuggestionOut)
+def get_suggestion(suggestion_id: UUID, db: Session = Depends(get_db)):
+    suggestion = db.query(models.VisibilitySuggestion).filter_by(suggestion_id=suggestion_id).first()
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    return suggestion
+
+# -------------------------
+# ✅ STRICT VISIBILITY CHECKER (INTERNAL)
 # -------------------------
 @router.post("/run", response_model=VisibilityCheckResultOut)
 def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)):
@@ -89,11 +195,16 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
     """
 
     try:
+        # ✅ Using Gemini 2.5 Flash as requested
         model = genai.GenerativeModel('models/gemini-2.5-flash')
+        
         response = model.generate_content(prompt)
         
+        # Robust Parsing
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
-        if not clean_text: raise ValueError("Empty AI response")
+        
+        if not clean_text:
+            raise ValueError("Empty AI response received")
 
         ai_data = json.loads(clean_text)
 
@@ -121,7 +232,9 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
         return result
 
     except Exception as e:
-        # Fallback logic
+        print(f"❌ AI VISIBILITY CHECK FAILED: {str(e)}")
+        
+        # ✅ Transparent Fallback
         error_msg = str(e)
         strict_score = 0
         issues = [f"AI Error: {error_msg}"]
@@ -133,20 +246,27 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
         else:
             strict_score += 30
 
-        if len(services) == 0: issues.append("No services listed")
-        else: strict_score += 20
+        if len(services) == 0:
+            issues.append("No services listed")
+        else:
+            strict_score += 20
         
-        if media_count < 3: issues.append("Not enough images (Need 3+)")
-        else: strict_score += 20
+        if media_count < 3:
+            issues.append("Not enough images (Need 3+)")
+        else:
+            strict_score += 20
         
         if not business.description or len(business.description) < 50:
             issues.append("Description too short or missing")
-        else: strict_score += 10
+        else:
+            strict_score += 10
+
+        final_score = min(strict_score, 50) 
 
         result = models.VisibilityCheckResult(
             request_id=check.request_id,
             business_id=business_id,
-            visibility_score=min(strict_score, 50),
+            visibility_score=final_score,
             issues_found="; ".join(issues),
             recommendations="; ".join(recs),
             completed_at=datetime.utcnow()
@@ -155,14 +275,16 @@ def run_visibility(business_id: UUID = Query(...), db: Session = Depends(get_db)
         db.commit()
         return result
 
+
 # -------------------------
-# EXTERNAL (PUBLIC) AUDIT
+# ✅ NEW: EXTERNAL (PUBLIC) AUDIT
 # -------------------------
 class ExternalAuditRequest(BaseModel):
     url: HttpUrl
 
 @router.post("/external")
 def audit_external_site(data: ExternalAuditRequest):
+    # 1. Scrape the website (Basic)
     try:
         headers = {'User-Agent': 'AiVault-Auditor/1.0'}
         response = requests.get(str(data.url), headers=headers, timeout=10)
@@ -170,6 +292,7 @@ def audit_external_site(data: ExternalAuditRequest):
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
+        # Extract Key Data
         title = soup.title.string if soup.title else "Missing Title"
         desc_tag = soup.find("meta", attrs={"name": "description"})
         description = desc_tag["content"] if desc_tag else "Missing Description"
@@ -186,48 +309,40 @@ def audit_external_site(data: ExternalAuditRequest):
             "score": 0,
             "bot_analysis": "Site Unreachable",
             "human_analysis": "Site Unreachable",
-            "recommendations": ["Check URL validity", "Ensure site is public"]
+            "recommendations": ["Check if URL is correct", "Ensure site is public"]
         }
 
+    # 2. Ask Gemini
     prompt = f"""
-    Act as an SEO Auditor. Analyze raw website data:
+    Act as an SEO & AI Visibility Auditor. Analyze this raw website data:
+    
     URL: {data.url}
     Title: {title}
     Description: {description}
-    H1: {h1_count}, Images: {img_count}, JSON-LD: {'Yes' if json_ld else 'NO'}
-    Content Sample: {raw_text[:500]}
+    H1 Tags: {h1_count}
+    Images: {img_count}
+    JSON-LD Schema Found: {'Yes' if json_ld else 'NO'}
+    Sample Content: {raw_text[:500]}...
 
-    Grade strictly. JSON-LD missing = Fail. No H1 = Deduct points.
-    Return JSON: {{ "score": 0-100, "bot_analysis": "...", "human_analysis": "...", "recommendations": ["..."] }}
+    Grading Criteria:
+    - JSON-LD missing? Max score 50.
+    - No H1? Deduct 10.
+    - Description missing? Deduct 20.
+
+    Return JSON:
+    {{
+        "score": 0-100,
+        "bot_analysis": "Can bots understand this?",
+        "human_analysis": "Is it clear for humans?",
+        "recommendations": ["Action 1", "Action 2"]
+    }}
     """
 
     try:
         model = genai.GenerativeModel('models/gemini-2.5-flash')
         response = model.generate_content(prompt)
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
-        return json.loads(clean_text)
+        result = json.loads(clean_text)
+        return result
     except Exception as e:
         return {"error": "AI Analysis Failed", "details": str(e)}
-
-# -------------------------
-# STANDARD CRUD (Required for Frontend)
-# -------------------------
-@router.post("/check", response_model=VisibilityCheckRequestOut)
-def create_check_request(data: VisibilityCheckRequestCreate, db: Session = Depends(get_db)):
-    new_check = models.VisibilityCheckRequest(**data.model_dump())
-    db.add(new_check)
-    db.commit()
-    db.refresh(new_check)
-    return new_check
-
-@router.get("/check", response_model=List[VisibilityCheckRequestOut])
-def list_check_requests(business_id: UUID = Query(...), db: Session = Depends(get_db)):
-    return db.query(models.VisibilityCheckRequest).filter_by(business_id=business_id).all()
-
-@router.get("/result", response_model=List[VisibilityCheckResultOut])
-def list_results(business_id: UUID = Query(...), db: Session = Depends(get_db)):
-    return db.query(models.VisibilityCheckResult).filter_by(business_id=business_id).order_by(models.VisibilityCheckResult.completed_at.desc()).all()
-
-@router.get("/suggestion", response_model=List[VisibilitySuggestionOut])
-def list_suggestions(business_id: UUID = Query(...), db: Session = Depends(get_db)):
-    return db.query(models.VisibilitySuggestion).filter_by(business_id=business_id).all()
