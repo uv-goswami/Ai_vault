@@ -345,4 +345,4 @@ def audit_external_site(data: ExternalAuditRequest):
         result = json.loads(clean_text)
         return result
     except Exception as e:
-        return {"error": "AI Analysis Failed", "details": str(e)}
+        return {"error": "AI Analysis Failed", "details": str(e)}  
