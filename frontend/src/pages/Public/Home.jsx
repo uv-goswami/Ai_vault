@@ -4,6 +4,7 @@ import '../../styles/home.css'
 import { prefetch, runExternalVisibilityCheck } from '../../api/client'
 
 export default function Home() {
+  // New State for Quick Audit
   const [auditUrl, setAuditUrl] = useState('')
   const [auditResult, setAuditResult] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -28,14 +29,9 @@ export default function Home() {
     }
   }
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return '#28a745'
-    if (score >= 50) return '#ffc107'
-    return '#dc3545'
-  }
-
   return (
     <div className="home-page">
+      {/* Hero Section */}
       <header className="hero">
         <div className="hero-inner">
           <h1>Elevate your local visibility with AiVault</h1>
@@ -55,18 +51,26 @@ export default function Home() {
             </Link>
           </div>
 
+          {/* --- NEW: Quick Audit Input --- */}
           <div style={{ marginTop: '2.5rem', maxWidth: '600px', marginLeft:'auto', marginRight:'auto' }}>
             <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem', opacity: 0.9 }}>
-              Check any website's AI Visibility Score:
+              Already have a website? Check its AI Visibility score:
             </p>
             <form onSubmit={handleAudit} style={{ display: 'flex', gap: '10px' }}>
               <input 
                 type="url" 
-                placeholder="https://example.com" 
+                placeholder="https://yourwebsite.com" 
                 required
                 value={auditUrl}
                 onChange={(e) => setAuditUrl(e.target.value)}
-                style={{ flex: 1, padding: '12px', borderRadius: '6px', border: 'none', color: '#333' }}
+                style={{ 
+                  flex: 1, 
+                  padding: '12px', 
+                  borderRadius: '6px', 
+                  border: 'none',
+                  fontSize: '1rem',
+                  color: '#333' // Ensure input text is dark
+                }}
               />
               <button 
                 type="submit" 
@@ -78,22 +82,34 @@ export default function Home() {
               </button>
             </form>
 
+            {/* Error Message */}
             {error && (
                <div style={{ marginTop:'10px', color: '#ffcdd2', background: 'rgba(255,0,0,0.2)', padding:'10px', borderRadius:'4px' }}>
                  ⚠️ {error}
                </div>
             )}
 
+            {/* Result Card (Fixed Coloring) */}
             {auditResult && (
               <div className="panel" style={{ 
-                  marginTop: '1.5rem', textAlign: 'left', background: 'white', color: '#333',
-                  borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.25)', padding: '1.5rem'
+                  marginTop: '1.5rem', 
+                  textAlign: 'left', 
+                  background: 'white', 
+                  color: '#333', // Force dark text for the card
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+                  animation: 'fadeIn 0.3s ease-out',
+                  padding: '1.5rem'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom:'1rem', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
                     <h3 style={{ margin:0, color: '#333', fontSize: '1.2rem' }}>Audit Results</h3>
                     <div style={{ 
-                        background: getScoreColor(auditResult.score), 
-                        color: 'white', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem'
+                        background: auditResult.score >= 80 ? '#28a745' : auditResult.score >= 50 ? '#ffc107' : '#dc3545', 
+                        color: 'white', 
+                        padding: '6px 12px', 
+                        borderRadius: '20px', 
+                        fontWeight: 'bold',
+                        fontSize: '0.9rem'
                     }}>
                         Score: {auditResult.score}/100
                     </div>
@@ -101,20 +117,37 @@ export default function Home() {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', fontSize: '0.9rem' }}>
                     <div>
-                        <strong style={{ color: '#000', display: 'block', marginBottom: '5px' }}>Bot Analysis</strong>
+                        <strong style={{ color: '#000', display: 'block', marginBottom: '5px' }}>Bot Perspective</strong>
                         <p style={{ color: '#555', margin: 0, lineHeight: '1.5' }}>{auditResult.bot_analysis}</p>
                     </div>
                     <div>
-                        <strong style={{ color: '#000', display: 'block', marginBottom: '5px' }}>Human Analysis</strong>
+                        <strong style={{ color: '#000', display: 'block', marginBottom: '5px' }}>Human Perspective</strong>
                         <p style={{ color: '#555', margin: 0, lineHeight: '1.5' }}>{auditResult.human_analysis}</p>
                     </div>
+                </div>
+
+                <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
+                    <strong style={{ color: '#000' }}>Recommendations:</strong>
+                    <ul style={{ margin: '0.5rem 0 0 1.2rem', color: '#555', fontSize: '0.9rem' }}>
+                        {auditResult.recommendations?.map((rec, i) => (
+                            <li key={i} style={{ marginBottom: '4px' }}>{rec}</li>
+                        ))}
+                    </ul>
+                </div>
+                
+                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                    <Link to="/register" style={{ fontWeight: 'bold', color: '#007bff', textDecoration: 'none' }}>
+                        Create a free AiVault profile to fix this →
+                    </Link>
                 </div>
               </div>
             )}
           </div>
+
         </div>
       </header>
 
+      {/* Features Section */}
       <main className="container">
         <section className="features">
           <div className="feature-card">

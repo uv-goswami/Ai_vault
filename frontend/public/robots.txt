@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ai-vault-backend-q98p.onrender.com/public/sitemap.xml

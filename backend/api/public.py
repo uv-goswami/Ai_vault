@@ -1,16 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from db.database import get_db
 from db import models
 from uuid import UUID
+from datetime import datetime
 
+# Define the router
 router = APIRouter(prefix="/public", tags=["Public SEO Pages"])
 
 # 1. DYNAMIC SITEMAP (The Map for Bots)
 @router.get("/sitemap.xml", response_class=Response)
 def generate_sitemap(request: Request, db: Session = Depends(get_db)):
-    # Base URL for the public endpoints (adjust to your real domain in production)
+    # Base URL for the public endpoints
+    # Uses the request's base URL to ensure it works on localhost AND Render automatically
     base_url = str(request.base_url).rstrip("/") + "/public/business"
     
     # Fetch all published businesses
@@ -50,7 +53,9 @@ def get_public_directory(request: Request, db: Session = Depends(get_db)):
     list_items = []
     for b in businesses:
         link = f"/public/business/{b.business_id}"
-        desc = (b.description[:100] + "...") if b.description else "No description"
+        # Truncate description safely
+        desc = (b.description[:100] + "...") if (b.description and len(b.description) > 100) else (b.description or "No description")
+        
         list_items.append(f"""
             <li style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                 <a href="{link}" style="font-size: 1.2em; font-weight: bold; text-decoration: none; color: #007bff;">{b.name}</a>
@@ -147,7 +152,7 @@ def get_business_seo_page(business_id: UUID, db: Session = Depends(get_db)):
             <p><strong>Phone:</strong> {business.phone or 'N/A'}</p>
             <p><strong>Website:</strong> <a href="{business.website}">{business.website}</a></p>
 
-            <a href="https://aivault-frontend.onrender.com/business/{business_id}" class="cta">
+            <a href="https://aivault-frontend.onrender.com/directory" class="cta">
                 View Interactive Profile
             </a>
         </main>
