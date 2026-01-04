@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../../styles/home.css'
-import { prefetch, API_BASE } from '../../api/client'
 import { prefetch, runExternalVisibilityCheck } from '../../api/client'
 
 export default function Home() {
